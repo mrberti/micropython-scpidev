@@ -1,2 +1,5 @@
 # pyscpidev
-A python package to turn your device into an SCPI end point
+A python package to turn your device into an SCPI end point.
+
+# Usage
+`import scpidev`
