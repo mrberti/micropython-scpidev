@@ -1,5 +1,6 @@
-import scpidev
+from .scpiparser import SCPIParser
 
 class SCPIDevice():
     def __init__(self):
-        pass
+        print("SCPIDevice")
+        self._parser = SCPIParser()
