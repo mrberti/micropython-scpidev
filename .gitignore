@@ -3,6 +3,13 @@
 
 # Setuptools distribution folder
 /dist/
+/build/
 
 # Python egg metadata, regenerated from source files by setuptoopls
 /*.egg-info
+
+# IDE garbage
+/.vscode/
+
+# Supplementary documents
+/doc_local/
