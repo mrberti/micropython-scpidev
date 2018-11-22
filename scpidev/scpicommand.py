@@ -4,14 +4,20 @@ import re
 
 class SCPIKeyword():
     def __init__(self, keyword_tuple, is_optional=False):
-        self.keyword_tuple = keyword_tuple
-        self.is_optional = is_optional
+        self._keyword_tuple = keyword_tuple
+        self._is_optional = is_optional
 
     def __str__(self):
-        if self.is_optional:
-            return "[{}]".format(repr(self.keyword_tuple))
+        if self.is_optional():
+            return "[{}]".format(repr(self._keyword_tuple))
         else:
-            return "{}".format(repr(self.keyword_tuple))
+            return "{}".format(repr(self._keyword_tuple))
+
+    def __getitem__(self, key):
+        return self._keyword_tuple[key]
+
+    def is_optional(self):
+        return self._is_optional
 
 
 class SCPIKeywordList(list):
@@ -211,6 +217,9 @@ class SCPICommand():
     def get_keyword_string(self):
         return self._keyword_string
 
+    def get_keyword_list(self):
+        return self._keyword_list
+
     def get_parameter_string(self):
         return self._parameter_string
     
@@ -254,14 +263,66 @@ class SCPICommand():
         keyword_string = self._create_keyword_string(command_string)
         parameter_string = self._create_parameter_string(command_string)
         matches_keyword = self.match_keyword(keyword_string)
-        match_parameter = self.match_parameters(parameter_string)
-        return matches_keyword and match_parameter
+        matches_parameter = self.match_parameters(parameter_string)
+        return matches_keyword and matches_parameter
 
     def match_keyword(self, keyword_string):
         """Return ``True`` if ``keyword_string`` matches the instances 
-        ``self._keyword_string``. ``False`` otherwise."""
-        matches_keyword = False
-        return matches_keyword
+        keyword. ``False`` otherwise."""
+        keyword_string = keyword_string.lower()
+        # Check if the command is a query. If True, remove the trailing '?'.
+        if keyword_string.endswith("?"):
+            if self.is_query():
+                keyword_string = keyword_string.replace("?", "")
+            else:
+                logging.debug(
+                    "This command is not a query, but the keyword ended with "
+                    "'?'.")
+                return False
+        elif self.is_query():
+            logging.debug(
+                "This command is a query, but the keyword did not end with '?'"
+                ".")
+            return False
+
+        # Split keywords into a test string list against which each keyword 
+        # will be tested.
+        test_string_list = keyword_string.split(":")
+
+        # Iterate over all keywords. Leave the procedure as soon as a mismatch 
+        # is detected. When the loop finishes ordinarily, the matching was 
+        # succesful.
+        keyword_i = 0
+        for keyword in self.get_keyword_list():
+            if keyword_i >= len(test_string_list):
+                if not keyword.is_optional():
+                    logging.debug(
+                        "Mismatch: Expected more non-optional keywords to "
+                        "follow.")
+                    return False
+                continue
+            test_string = test_string_list[keyword_i]
+            req_string = keyword[0].lower()
+            opt_string = req_string + keyword[1].lower()
+            logging.debug(
+                "Testing '{}' in '{}'?"
+                .format(test_string, keyword))
+            if not test_string.startswith(req_string):
+                if keyword.is_optional():
+                    continue
+                else:
+                    logging.debug(
+                        "Mismatch: Required keyword '{}' not found. Got: '{}'"
+                        .format(req_string.upper(), test_string.upper()))
+                    return False
+            if not opt_string.startswith(test_string):
+                logging.debug(
+                    "Mismatch: Trailing characters not correct: '{}' =!= '{}'"
+                    .format(test_string, opt_string))
+                return False
+            keyword_i += 1
+        logging.debug("Matching OK.")
+        return True
 
     def match_parameters(self, parameter_string):
         match = False
