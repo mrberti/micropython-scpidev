@@ -4,4 +4,6 @@ from .scpicommand import (
     SCPIKeyword, 
     SCPIKeywordList, 
     SCPIParameterList, 
+    SCPIValue, 
+    SCPIValueList,
 )

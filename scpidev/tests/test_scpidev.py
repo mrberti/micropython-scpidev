@@ -34,7 +34,13 @@ cmd = scpidev.SCPICommand(cmd_str, test_function)
 # print(cmd._scpi_string)
 # print(cmd._keyword_string)
 # print(cmd._parameter_string)
-k = "meas?"
-p = "10 A"
-c = k + " " + p
-print(cmd.match_keyword(k))
+p = "{<date string>|CHANnel<n>}"
+p = "{A|Bc}"
+vl = scpidev.SCPIValueList(p)
+for v in vl:
+    print(v)
+# k = "meas?"
+# p = "10 A"
+# c = k + " " + p
+# print(cmd.match_keyword(k))
+# print(cmd.match_parameters(p))

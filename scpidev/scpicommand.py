@@ -1,6 +1,8 @@
 import logging
 import re
 
+from . import utils
+
 
 class SCPIKeyword():
     def __init__(self, keyword_tuple, is_optional=False):
@@ -47,6 +49,73 @@ class SCPIKeywordList(list):
             #     pass
 
 
+class SCPIValue():
+    NONE = 0
+    NUMERIC = 1
+    BOOLEAN = 2
+    DISCRETE = 3
+    DISCRETE_N = 4
+    ASCII_STRING = 5
+
+    def __init__(self, value_string):
+        self._value_string = value_string
+        self._type = SCPIValue.NONE
+        self._value = None
+        
+        if re.match(r"^<.+>$", value_string):
+            if "string" in value_string:
+                # Todo: find a better way to define ASCII_STRING type
+                self._type = SCPIValue.ASCII_STRING
+            else:
+                self._type = SCPIValue.NUMERIC
+            self._value = "<Nf>"
+        elif value_string:
+            self._type = SCPIValue.DISCRETE
+            req_string = utils.findfirst(r"[A-Z0-9]+", value_string)
+            opt_string = utils.findfirst(r"[a-z0-9]+", value_string)
+            num_string = utils.findfirst(r"[a-zA-Z]+(<.+>)", value_string)
+            if num_string:
+                self._type = SCPIValue.DISCRETE_N
+            if (req_string is "ON" 
+                    or req_string is "OFF" 
+                    or req_string is "1" 
+                    or req_string is "0"):
+                self._type = SCPIValue.BOOLEAN
+            self._value = (req_string, opt_string, num_string)
+        if self._type is SCPIValue.NONE:
+            logging.warning("Detected a NONE typed SCPIValue.")
+
+    def __str__(self):
+        return (
+            "{} => Type {}: {}".format(
+                repr(self._value_string),
+                str(self._type),
+                repr(self._value),
+        ))
+
+    def get_type(self):
+        return self._type
+
+    def get_value(self):
+        return self._value
+
+
+class SCPIValueList(list):
+    def __init__(self, values_string):
+        super().__init__()
+
+        # Get inner part of {} which contains the parameter's values.
+        inner = re.findall(r"{(.+)}", values_string)
+        if inner:
+            values = inner[0].split("|")
+            for val in values:
+                self.append(SCPIValue(val))
+        else:
+            # In case that no values are given, the parameter value is assumed 
+            # to be a numeric value.
+            values = self.append(SCPIValue(values_string))
+
+
 class SCPIParameter():
 
     def __init__(self, 
@@ -85,11 +154,11 @@ class SCPIParameter():
 
         # Sanatize string by removing all brackets and adding again, if the 
         # parameter is optional.
-        parameter_string_temp = re.sub(r"[\[\]]", "", parameter_string)
+        parameter_string = re.sub(r"[\[\]]", "", parameter_string)
         if is_optional:
-            self._parameter_string  = "[" + parameter_string_temp + "]"
+            self._parameter_string  = "[" + parameter_string + "]"
         else:
-            self._parameter_string = parameter_string_temp
+            self._parameter_string = parameter_string
 
         # Get parameter name. The parameter name is surrounded by <> and 
         # outside of {}.
@@ -98,7 +167,7 @@ class SCPIParameter():
             name = name[0]
 
         # Get inner part of {} which contains the parameter's values.
-        inner = re.findall(r"{(.+)}", parameter_string_temp)
+        inner = re.findall(r"{(.+)}", parameter_string)
         if inner:
             values = inner[0].split("|")
             for val in values:
@@ -326,7 +395,8 @@ class SCPICommand():
 
     def match_parameters(self, parameter_string):
         match = False
-        cmd_parameter_list = SCPIParameterList(parameter_string)
-        for parameter in cmd_parameter_list:
+        # parameter_list = SCPIParameterList(parameter_string)
+        for parameter in self.get_parameter_list():
+            print(parameter)
             match = match and parameter.match(parameter_string)
         return match

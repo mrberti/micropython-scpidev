@@ -15,3 +15,13 @@ REGEXP_NR1 = re.compile(REGEXP_STRING_NR1)
 REGEXP_NR2 = re.compile(REGEXP_STRING_NR2)
 REGEXP_NR3 = re.compile(REGEXP_STRING_NR3)
 REGEXP_NF = re.compile(REGEXP_STRING_NF)
+
+def findfirst(pattern, string, flags=0):
+    """Return the first string of a regular expression match or an empty 
+    string if no result was found."""
+    string_list = re.findall(pattern, string, flags)
+    if string_list:
+        result = string_list[0]
+    else:
+        result = ""
+    return result
