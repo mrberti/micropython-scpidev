@@ -1,7 +1,7 @@
 import logging
 import re
 
-import scpidev
+from scpidev.command import SCPICommand, SCPICommandList
 
 FORMAT = "<%(levelname)s> %(message)s"
 logging.basicConfig(format=FORMAT, level=logging.DEBUG)
@@ -13,7 +13,7 @@ def test_function(*args, **kwargs):
 
 cmd_str = ("MEASure[:VOLTage][:DC]? "
     "[{<range>|AUTOmatic|MIN|MAX|DEF} [,  {<resolution>|MIN|MAX|DEF}] ]")
-cmd = scpidev.SCPICommand(cmd_str, test_function)
+cmd = SCPICommand(cmd_str, test_function)
 k = "measu?"
 parameters = [
     "10 A",

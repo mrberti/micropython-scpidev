@@ -4,7 +4,6 @@ import re
 from . import utils
 from .keyword import SCPIKeyword, SCPIKeywordList
 from .parameter import SCPIParameter, SCPIParameterList
-from .value import SCPIValue, SCPIValueList
 
 
 class SCPICommand():
