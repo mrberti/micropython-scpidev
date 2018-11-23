@@ -23,3 +23,4 @@ parameters = [
 for p in parameters:
     c = k + p
     cmd.execute_if_match(p)
+    print("--------------------------")

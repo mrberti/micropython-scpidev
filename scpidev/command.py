@@ -424,3 +424,7 @@ class SCPICommand():
                 return False
             pos += 1
         return True
+
+class SCPICommandList(list):
+    def __init__(self):
+        list.__init__(self)

@@ -1,5 +1,5 @@
-from .scpidevice import SCPIDevice
-from .scpicommand import (
+from .device import SCPIDevice
+from .command import (
     SCPICommand, 
     SCPIKeyword, 
     SCPIKeywordList, 
