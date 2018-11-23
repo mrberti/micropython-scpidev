@@ -28,3 +28,19 @@ def findfirst(pattern, string, flags=0):
 
 def remove_non_ascii(string):
     return re.sub(r'[^\x00-\x7f]',r'', string)
+
+def sanitize(input, remove_all_spaces=False):
+    """Remove excessive and wrong characters as much as possible."""
+    sanitized = input
+    sanitized = remove_non_ascii(sanitized)
+    # Control characters which appear often in source code, e.g. new-line 
+    # characters in multi-line python strings.
+    sanitized = re.sub(r"[\n\t]", r"", sanitized)
+    # Spaces at the beginning of the string.
+    sanitized = re.sub(r"(^ +)", r"", sanitized)
+    if remove_all_spaces:
+        sanitized = sanitized.replace(" ", "")
+    else:
+        # More than one space.
+        sanitized = re.sub(r" +", r" ", sanitized)
+    return sanitized
