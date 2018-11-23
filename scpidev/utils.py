@@ -44,3 +44,16 @@ def sanitize(input, remove_all_spaces=False):
         # More than one space.
         sanitized = re.sub(r" +", r" ", sanitized)
     return sanitized
+
+def create_keyword_string(command_string):
+    """Creates the keyword string. The keyword string is everything before 
+    the first space character."""
+    cmd_str = command_string.split(" ")[0]
+    return cmd_str
+
+def create_parameter_string(command_string):
+    """Create the parameter string. The parameter string is everything 
+    after the first space character. All other space characters are 
+    removed."""
+    parameter_string = "".join(command_string.split(" ")[1:])
+    return parameter_string
