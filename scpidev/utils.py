@@ -25,3 +25,6 @@ def findfirst(pattern, string, flags=0):
     else:
         result = ""
     return result
+
+def remove_non_ascii(string):
+    return re.sub(r'[^\x00-\x7f]',r'', string)
