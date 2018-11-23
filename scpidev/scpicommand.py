@@ -41,11 +41,11 @@ class SCPIKeywordList(list):
                 self.append(keyword)
             str_req = str_opt = ""
 
-            if c is "[":
+            if c == "[":
                 is_optional = True
-            if c is "]":
+            if c == "]":
                 is_optional = False
-            # if c is ":":
+            # if c == ":":
             #     pass
 
 
@@ -74,23 +74,22 @@ class SCPIValue():
             req_string = utils.findfirst(r"[A-Z0-9]+", value_string)
             opt_string = utils.findfirst(r"[a-z0-9]+", value_string)
             num_string = utils.findfirst(r"[a-zA-Z]+(<.+>)", value_string)
+            if ((req_string == "ON") 
+                    or (req_string == "OFF") 
+                    or (req_string == "1") 
+                    or (req_string == "0")):
+                self._type = SCPIValue.BOOLEAN
             if num_string:
                 self._type = SCPIValue.DISCRETE_N
-            if (req_string is "ON" 
-                    or req_string is "OFF" 
-                    or req_string is "1" 
-                    or req_string is "0"):
-                self._type = SCPIValue.BOOLEAN
             self._value = (req_string, opt_string, num_string)
-        if self._type is SCPIValue.NONE:
+        if self._type == SCPIValue.NONE:
             logging.warning("Detected a NONE typed SCPIValue.")
 
     def __str__(self):
         return (
-            "{} => Type {}: {}".format(
-                repr(self._value_string),
-                str(self._type),
+            "<{}:{}>".format(
                 repr(self._value),
+                str(self._type),
         ))
 
     def get_type(self):
@@ -108,13 +107,17 @@ class SCPIValueList(list):
         # Get inner part of {} which contains the parameter's values.
         inner = re.findall(r"{(.+)}", values_string)
         if inner:
-            values = inner[0].split("|")
-            for val in values:
+            for val in inner[0].split("|"):
                 self.append(SCPIValue(val))
         else:
-            # In case that no values are given, the parameter value is assumed 
-            # to be a numeric value.
-            values = self.append(SCPIValue(values_string))
+            self.append(SCPIValue(values_string))
+    
+    def __str__(self):
+        ret = "["
+        for value in self:
+            ret = ret + str(value) + " "
+        ret = ret + "]"
+        return ret
 
 
 class SCPIParameter():
@@ -142,7 +145,7 @@ class SCPIParameter():
     def __str__(self):
         ret = "\n"
         for key, val in self.__dict__.items():
-            ret = ret + str(key) + ": " + repr(val) + "\n"
+            ret = ret + str(key) + ": " + str(val) + "\n"
         return ret
 
     def _init_from_parameter_string(self, parameter_string):
@@ -168,22 +171,24 @@ class SCPIParameter():
         if name:
             name = name[0]
 
-        # Get inner part of {} which contains the parameter's values.
-        inner = re.findall(r"{(.+)}", parameter_string)
-        if inner:
-            values = inner[0].split("|")
-            for val in values:
-                # If there is no name given previously, we try to get one from 
-                # the parameter's value list or finally try make one up on our 
-                # own.
-                if not name:
-                    name = re.findall(r"^<(.+?)>$", val)
-                if not name:
-                    name = "p{}".format(str(self._position))
-        else:
-            # In case that no values are given, the parameter value is assumed 
-            # to be a numeric value.
-            values = list(name)
+        values = SCPIValueList(parameter_string)
+
+        # # Get inner part of {} which contains the parameter's values.
+        # inner = re.findall(r"{(.+)}", parameter_string)
+        # if inner:
+        #     values = inner[0].split("|")
+        #     for val in values:
+        #         # If there is no name given previously, we try to get one from 
+        #         # the parameter's value list or finally try make one up on our 
+        #         # own.
+        #         if not name:
+        #             name = re.findall(r"^<(.+?)>$", val)
+        #         if not name:
+        #             name = "p{}".format(str(self._position))
+        # else:
+        #     # In case that no values are given, the parameter value is assumed 
+        #     # to be a numeric value.
+        #     values = list(name)
 
         # Finally update all class variables.
         self._name = name
@@ -259,7 +264,7 @@ class SCPICommand():
     def __str__(self):
         ret = "\n"
         for key, val in self.__dict__.items():
-            ret = ret + str(key) + ": " + repr(val) + "\n"
+            ret = ret + str(key) + ": " + str(val) + "\n"
         return str(ret)
 
     def _create_keyword_string(self, command_string):
