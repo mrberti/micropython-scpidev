@@ -103,6 +103,7 @@ class SCPIValue():
 class SCPIValueList(list):
     def __init__(self, values_string):
         list.__init__(self)
+        values_string = utils.sanitize(values_string, remove_all_spaces=True)
 
         # Get inner part of {} which contains the parameter's values.
         inner = re.findall(r"{(.+)}", values_string)
@@ -141,10 +142,11 @@ class SCPIParameter():
     def __str__(self):
         ret = "\n"
         for key, val in self.__dict__.items():
-            ret = ret + "<" + str(key) + "> " + repr(val) + "\n"
-        return str(ret)
+            ret = ret + str(key) + ": " + repr(val) + "\n"
+        return ret
 
     def _init_from_parameter_string(self, parameter_string):
+        parameter_string = utils.sanitize(parameter_string, True)
         # Check, if the parameter is optional. Optional parameters contain an 
         # opening square bracket.
         if "[" in parameter_string:
@@ -204,6 +206,8 @@ class SCPIParameter():
 class SCPIParameterList(list):
     def __init__(self, parameter_string):
         list.__init__(self)
+        parameter_string = utils.sanitize(
+            parameter_string, remove_all_spaces=True)
 
         # Get all optional commands.
         parameter_temp_string = ""
@@ -239,7 +243,7 @@ class SCPICommand():
     """Todo..."""
 
     def __init__(self, scpi_string, callback, name="", description=""):
-        self._scpi_string = self._sanitize(scpi_string)
+        self._scpi_string = utils.sanitize(scpi_string)
         self._callback = callback
         self._description = description
         self._keyword_string = self._create_keyword_string(self._scpi_string)
@@ -255,20 +259,8 @@ class SCPICommand():
     def __str__(self):
         ret = "\n"
         for key, val in self.__dict__.items():
-            ret = ret + "<" + str(key) + "> " + repr(val) + "\n"
+            ret = ret + str(key) + ": " + repr(val) + "\n"
         return str(ret)
-
-    def _sanitize(self, input):
-        """Remove excessive and wrong characters as much as possible."""
-        sanitized = input
-        # Control characters which appear often in source code, e.g. new-line 
-        # characters in multi-line python strings.
-        sanitized = re.sub(r"[\n\t]", r"", sanitized)
-        # Spaces at the beginning of the string.
-        sanitized = re.sub(r"(^ +)", r"", sanitized)
-        # More than one space.
-        sanitized = re.sub(r" +", r" ", sanitized)
-        return sanitized
 
     def _create_keyword_string(self, command_string):
         """Creates the keyword string. The keyword string is everything before 
