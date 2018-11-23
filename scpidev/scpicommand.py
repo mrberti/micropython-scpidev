@@ -24,7 +24,7 @@ class SCPIKeyword():
 
 class SCPIKeywordList(list):
     def __init__(self, keyword_string):
-        super().__init__()
+        list.__init__(self)
 
         is_optional = False
         str_req = str_opt = ""
@@ -102,7 +102,7 @@ class SCPIValue():
 
 class SCPIValueList(list):
     def __init__(self, values_string):
-        super().__init__()
+        list.__init__(self)
 
         # Get inner part of {} which contains the parameter's values.
         inner = re.findall(r"{(.+)}", values_string)
@@ -203,7 +203,7 @@ class SCPIParameter():
 
 class SCPIParameterList(list):
     def __init__(self, parameter_string):
-        super().__init__()
+        list.__init__(self)
 
         # Get all optional commands.
         parameter_temp_string = ""
