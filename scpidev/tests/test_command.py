@@ -6,6 +6,7 @@ import scpidev
 FORMAT = "<%(levelname)s> %(message)s"
 logging.basicConfig(format=FORMAT, level=logging.DEBUG)
 
+
 def test_function(*args, **kwargs):
     for arg in args:
         print("Test function, {}".format(str(arg)))

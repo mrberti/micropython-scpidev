@@ -1,6 +1,6 @@
 import logging
 
-import scpidev
+from scpidev.parameter import SCPIParameterList, SCPIParameter
 
 FORMAT = "<%(levelname)s> %(message)s"
 logging.basicConfig(format=FORMAT, level=logging.DEBUG)
@@ -24,7 +24,7 @@ ps = [
 ]
 
 for p in ps:
-    pl = scpidev.SCPIParameterList(p)
+    pl = SCPIParameterList(p)
     for param in pl:
         print(str(param))
     print("--------------------------")
