@@ -1,6 +1,11 @@
 import logging
 import threading
 import time
+try:
+    from queue import Queue
+except ImportError:
+    # Python2 compatibility
+    from Queue import Queue
 
 from . import utils
 from .command import SCPICommand, SCPICommandList
@@ -70,7 +75,12 @@ class SCPIDevice():
 
     def execute(self, command_string):
         """Search a matching command and execute it. If exceptions arise 
-        during execution, they are catched and an alarm is set."""
+        during execution, they are catched and an alarm is set.
+        
+        Todo: 
+        - Implement multiple commands in one line, e.g. MEAS?;MEAS:CURR?\n
+        - Implement parallelism in execution tasks
+        """
         executed = False
         match_found = False
         result = None
@@ -112,13 +122,17 @@ class SCPIDevice():
         self._interface_list.append(interface)
 
     def run(self):
+        """Start listening on the previously created interfaces and execute 
+        commands when a message is received.
+
+        This function should usually run forever.
+
+        Todo:
+        - Implement parallel execution tasks
+        """
         self._thread_list = list()
-        self._data_received_event = threading.Event()
         self._event_connection_closed = threading.Event()
-        # The _data_recv variable is secured by a thread lock. Always use the 
-        # read and write handler to insure data consistency.
-        self._data_recv = list()
-        self._lock = threading.Lock()
+        self._recv_queue = Queue() # Todo: Maxsize
 
         watchdog_thread = threading.Thread(
             target=self._watchdog, name="Watchdog")
@@ -129,68 +143,25 @@ class SCPIDevice():
             raise Exception("Cannot run: No interface specified.")
 
         for interface in self._interface_list:
-            thread_name = str(interface)
-            args = (interface, self._data_received_event)
+            args = (self._recv_queue,)
             t = threading.Thread(
-                target=self._data_handler, name=thread_name, args=args)
+                target=interface.data_handler, name=str(interface), args=args)
             self._thread_list.append(t)
             t.daemon = True
             t.start()
 
         while not self._event_connection_closed.is_set():
-            self._data_received_event.wait()
-            self._data_received_event.clear()
-            data_recv = self._read_data_from_buffer()
-            for command_string in data_recv:
-                self.execute(command_string)
-            print(data_recv)
-            time.sleep(1.)
+            command_string = self._recv_queue.get()
+            self.execute(command_string)
+            
         print("Server stopped...")
 
     def stop(self):
         self._event_connection_closed.set()
-
-    def _data_handler(self, interface, data_received_event):
-        while True:
-            try:
-                interface.open()
-            except Exception as e:
-                logging.warning(
-                    "Could not open interface {}. Exception: {}"
-                    .format(interface, str(e)))
-                return
-
-            while True:
-                data_recv = interface.readline()
-                if not data_recv:
-                    break
-                # print(repr(data_recv))
-                self._append_data_to_buffer(data_recv)
-                data_received_event.set()
-                
-                interface.write(data_recv)
-            interface.close()
-            time.sleep(1)
-
-    # def _write_data_to_buffer(self, data):
-    #     self._lock.acquire()
-    #     self._data_recv = data
-    #     self._lock.release()
-
-    def _append_data_to_buffer(self, data):
-        self._lock.acquire()
-        self._data_recv.append(data)
-        self._lock.release()
-
-    def _read_data_from_buffer(self):
-        self._lock.acquire()
-        data = self._data_recv
-        self._lock.release()
-        return data
 
     def _watchdog(self):
         """The watchdog should periodically check for deadlocks or other 
         inconsistencies. Todo: implement."""
         while True:
             logging.debug("Watchdog alive.")
-            time.sleep(10)
+            time.sleep(100)

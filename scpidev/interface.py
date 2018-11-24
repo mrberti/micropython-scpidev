@@ -1,5 +1,12 @@
 import logging
 import socket
+import time
+try:
+    from queue import Queue
+except ImportError:
+    # Python2 compatibility
+    from Queue import Queue
+
 try:
     import serial
 except ImportError:
@@ -86,12 +93,14 @@ class SCPIInterface():
         logging.info("TCP socket wating for connection...")
         self._socket, self._remote_addr = self._socket_local.accept()
         self._file = self._socket.makefile("rw")
-        logging.info("TCP socket got connection from {}".format(self._remote_addr))
+        logging.info("TCP socket connection established: {}"
+            .format(self._remote_addr))
 
     def _open_udp(self):
-        self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._socket.bind(self._addr)
         self._file = self._socket.makefile("rw")
+        self._remote_addr = None
         logging.info("UDP socket bound to {}.".format(self._addr))
 
     def _open_serial(self):
@@ -106,9 +115,23 @@ class SCPIInterface():
         return self._file.read(size)
 
     def readline(self):
+        if self.is_udp():
+            result = ""
+            while True:
+                (data, self._remote_addr) = self._socket.recvfrom(1024)
+                data = data.decode("utf8")
+                for char in data:
+                    if char == "\n":
+                        print(repr(char))
+                        break
+                    result = result + data
+            return result
         return self._file.readline()
 
     def write(self, data):
+        if self.is_udp():
+            if self._remote_addr is not None:
+                self._socket.sendto(data, self._remote_addr)
         bytes_written = self._file.write(data)
         self._file.flush()
         return bytes_written
@@ -133,30 +156,69 @@ class SCPIInterface():
         if self._socket_local is not None:
             self._socket_local.close()
 
+    def _data_handler_udp(self, data_queue):
+        while True:
+            try:
+                interface.open()
+                while True:
+                    data = interface.readline()
+                    if not data:
+                        break
+                    print(repr(data))
+                    # interface.write(data)
+            except KeyboardInterrupt:
+                break
+            # int_udp.close()
+            interface.close()
+            logging.info("Connections closed.")
+            # int_com.close()
+        interface.close()
+        logging.info("Server shutdown.")
+
+    def _data_handler_tcp(self, data_queue):
+        while True:
+            try:
+                self.open()
+            except Exception as e:
+                logging.warning(
+                    "Could not open interface {}. Exception: {}"
+                    .format(interface, str(e)))
+                continue
+            try:
+                while True:
+                    data_recv = self.readline()
+                    if not data_recv:
+                        break
+                    # print(repr(data_recv))
+                    data_queue.put(data_recv)
+                self.close()
+            except Exception as e:
+                logging.warning(
+                    "Could not Receive data on interface {}. Exception: {}"
+                    .format(self, str(e)))
+            time.sleep(1)
+
+    def _data_handler_serial(self, data_queue):
+        raise NotImplementedError
+
+    def data_handler(self, data_queue):
+        if self.is_tcp():
+            self._data_handler_tcp(data_queue)
+        if self.is_udp():
+            self._data_handler_udp(data_queue)
+        if self.is_serial():
+            self._data_handler_serial(data_queue)
+        else:
+            raise NotImplementedError
+
 if __name__ == "__main__":
     FORMAT = "<%(levelname)s> %(message)s"
     logging.basicConfig(format=FORMAT, level=logging.DEBUG)
 
-    int_udp = SCPIInterface("udp", ip="127.0.0.1", port=5025)
+    int_udp = SCPIInterface("udp")
     int_tcp = SCPIInterface("tcp", ip="localhost")
     int_com = SCPIInterface("serial", port="COM7", baudrate=500000, dsrdtr=1)
 
-    # int_udp.open()
-    # int_com.open()
-    while True:
-        try:
-            int_tcp.open()
-            while True:
-                data = int_tcp.readline()
-                if not data:
-                    break
-                print(repr(data))
-                int_tcp.write(data)
-        except KeyboardInterrupt:
-            break
-        # int_udp.close()
-        int_tcp.close()
-        logging.info("Connections closed.")
-        # int_com.close()
-    int_tcp.close()
-    logging.info("Server shutdown.")
+    interface = int_tcp
+    dq = Queue()
+    interface._data_handler_tcp(dq)
