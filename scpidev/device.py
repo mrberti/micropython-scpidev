@@ -9,7 +9,7 @@ except ImportError:
 
 from . import utils
 from .command import SCPICommand, SCPICommandList
-from .interface import SCPIInterface
+from .interface import SCPIInterfaceTCP, SCPIInterfaceUDP, SCPIInterfaceSerial
 
 class SCPIDevice():
     """``SCPIDevice`` is the main class for the SCPI device. It contains a 
@@ -95,12 +95,12 @@ class SCPIDevice():
                     result = cmd.execute(parameter_string)
                 except Exception as e:
                     reason = (
-                        "Exception during execution of function '{}': {}."
-                        .format(fn_name, str(e)))
+                        "Exception during execution of function {}: {}."
+                        .format(repr(fn_name), str(e)))
                     break
-                cmd_hist_string = "'{cs}' => '{cmd}' => {fn} => {res}".format(
-                    cs=command_string, cmd=str(cmd), fn=fn_name, 
-                    res=str(result))
+                cmd_hist_string = "{cs} => {cmd} => {fn} => {res}".format(
+                    cs=repr(command_string), cmd=repr(cmd), fn=fn_name, 
+                    res=repr(result))
                 self._command_history.append(cmd_hist_string)
                 executed = True
                 break
@@ -108,8 +108,8 @@ class SCPIDevice():
         if not executed:
             if not match_found:
                 reason = "No match found."
-            self.set_alarm("Could not execute command '{c}'. {r}"
-                .format(c=str(command_string), r=reason))
+            self.set_alarm("Could not execute command {c}. {r}"
+                .format(c=repr(command_string), r=reason))
         return result
 
     def get_command_history(self):
@@ -117,8 +117,20 @@ class SCPIDevice():
         return self._command_history
 
     def create_interface(self, type, *args, **kwargs):
+        """Create a communication interface.
+
+        Currently, these types are supported:
+        - TCP
+        - UDP
+        - Serial
+        """
         type = type.lower()
-        interface = SCPIInterface(type, *args, **kwargs)
+        if type == "tcp":
+            interface = SCPIInterfaceTCP(*args, **kwargs)
+        elif type == "udp":
+            interface = SCPIInterfaceUDP(*args, **kwargs)
+        elif type == "serial":
+            interface = SCPIInterfaceSerial(*args, **kwargs)
         self._interface_list.append(interface)
 
     def run(self):
@@ -131,13 +143,9 @@ class SCPIDevice():
         - Implement parallel execution tasks
         """
         self._thread_list = list()
-        self._event_connection_closed = threading.Event()
         self._recv_queue = Queue() # Todo: Maxsize
 
-        watchdog_thread = threading.Thread(
-            target=self._watchdog, name="Watchdog")
-        watchdog_thread.daemon = True
-        watchdog_thread.start()
+        self.start_watchdog()
 
         if not self._interface_list:
             raise Exception("Cannot run: No interface specified.")
@@ -150,16 +158,25 @@ class SCPIDevice():
             t.daemon = True
             t.start()
 
-        while not self._event_connection_closed.is_set():
-            command_string = self._recv_queue.get()
-            self.execute(command_string)
-            
+        while True:
+            data_recv = self._recv_queue.get()
+            interface = data_recv[0]
+            command_string = data_recv[1]
+            result = self.execute(command_string)
+            # Todo: return data
+            if result is not None:
+                interface.write(str(result))
+
         print("Server stopped...")
 
-    def stop(self):
-        self._event_connection_closed.set()
+    def start_watchdog(self):
+        # Todo: implement an intelligent watchdog
+        watchdog_thread = threading.Thread(
+            target=self._watchdog_handler, name="Watchdog")
+        watchdog_thread.daemon = True
+        watchdog_thread.start()
 
-    def _watchdog(self):
+    def _watchdog_handler(self):
         """The watchdog should periodically check for deadlocks or other 
         inconsistencies. Todo: implement."""
         while True:

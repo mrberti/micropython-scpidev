@@ -1,4 +1,6 @@
 import re
+import socket
+import logging
 
 # NR1: Integer numbers, e.g. 42
 REGEXP_STRING_NR1 = r"[\+-]?[0-9]+"
@@ -57,3 +59,18 @@ def create_parameter_string(command_string):
     removed."""
     parameter_string = "".join(command_string.split(" ")[1:])
     return parameter_string
+
+def get_local_ip(
+        remote_host="1.1.1.1", remote_port=80, default_ip="localhost"):
+    """Try to find out the local ip by establishing a test connection to 
+    a known remote host."""
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.connect((remote_host, remote_port))
+        ip = sock.getsockname()[0]
+    except Exception as e:
+        ip = default_ip
+        logging.warning("Could not get the local IP. Using default: {}. "
+            "Exception: {}".format(ip, str(e)))
+    sock.close()
+    return ip

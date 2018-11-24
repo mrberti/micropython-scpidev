@@ -1,4 +1,5 @@
 import logging
+import time
 import scpidev
 
 FORMAT = "%(levelname)s: %(message)s"
@@ -10,6 +11,7 @@ def test_function(*args, **kwargs):
     print("## Execute. ##")
     i = 0
     for arg in args:
+        time.sleep(1)
         i += 1
         print("Got arg: {}".format(str(arg)))
     return i
@@ -54,8 +56,8 @@ for cmd in command_strings:
     )
 
 # Crate the communication interfaces
-dev.create_interface("tcp", ip="192.168.1.40")
-# dev.create_interface("udp", ip="localhost")
+dev.create_interface("tcp")
+dev.create_interface("udp")
 # dev.create_interface("serial", port="COM7", baudrate="500000", dsrdtr=1)
 
 try:
