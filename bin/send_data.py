@@ -45,7 +45,6 @@ addr_local = (local_ip, port)
 # Create socket and connect
 if use_udp:
     print("Using UDP.")
-    
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 else:
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -59,17 +58,18 @@ else:
 # Create and start the reader thread
 def read_data(event):
     """Target function for reader thread."""
-    try:
-        sock.bind(addr_local)
-    except Exception as e:
-        print("Can't bind to {}. Reading not possible. Exception: {}"
-            .format(str(addr), str(e)))
-        return
+    if use_udp:
+        try:
+            sock.bind(addr_local)
+        except Exception as e:
+            print("Can't bind to {}. Reading not possible. Exception: {}"
+                .format(str(addr), str(e)))
+            return
     while True:
         data = sock.recv(1024)
         if not data:
             break
-        print("< {}".format(repr(data)))
+        print("> {}".format(repr(data)))
     print("Connection closed by server.")
     event.set()
 event = threading.Event()
@@ -85,7 +85,7 @@ try:
             sent = sock.sendto(data, addr)
         else:
             sent = sock.send(data)
-        print("> {}".format(repr(data)))
+        print("< {}".format(repr(data)))
         if not repeat_indefinitely:
             N -= 1
         time.sleep(interval)
