@@ -33,6 +33,7 @@ N = args.N
 repeat_indefinitely = (N == 0)
 interval = args.d
 addr = (args.ip, args.port)
+msg = args.msg
 
 # Create socket and connect
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -51,7 +52,7 @@ t.start()
 # Send out message
 try:
     while (N or repeat_indefinitely) and not event.is_set():
-        sent = sock.send("*RST\n".encode("utf8"))
+        sent = sock.send(msg.encode("utf8"))
         print("> Sent bytes: {}".format(sent))
         if not repeat_indefinitely:
             N -= 1
