@@ -1,20 +1,21 @@
 import logging
 import socket
 import time
-from . import utils
-
 try:
     from queue import Queue
 except ImportError:
     # Python2 compatibility
     from Queue import Queue
-
 try:
     import serial
+    HAS_SERIAL = True
 except ImportError:
+    HAS_SERIAL = False
     logging.warning("Could not load ``serial`` package. The serial "
         "communication interface will not work. Try to install the package "
         "with `python -m pip install pyserial`.")
+
+from . import utils
 
 
 class SCPIInterfaceTCP(socket.socket):
@@ -95,6 +96,8 @@ class SCPIInterfaceUDP(socket.socket):
         logging.info("UDP socket bound to {}.".format(self._addr))
     
     def write(self, data):
+        """Data will be sent to the host which most recently sent data to 
+        this interface."""
         if type(data) == type(u""):
             data = data.encode("utf8")
         if self._addr_target is not None:
@@ -113,7 +116,18 @@ class SCPIInterfaceUDP(socket.socket):
                     logging.debug("UDP received data from {}: {}".format(
                         repr(self._addr_target), repr(data_recv)))
 
-class SCPIInterfaceSerial(serial.Serial):
-    def data_handler(self, recv_queue):
-        while True:
-            time.sleep(1)
+if HAS_SERIAL:
+    class SCPIInterfaceSerial(serial.Serial):
+        def data_handler(self, recv_queue):
+            while True:
+                time.sleep(1)
+else:
+    class SCPIInterfaceSerial(object):
+        def __init__(self, *args, **kwargs):
+            logging.error("An serial interface was instantiated, but the "
+                "package pyserial is not installed. Attemps in establishing "
+                "serial communication will result in wild Exceptions.")
+
+        def data_handler(self, recv_queue):
+            while True:
+                time.sleep(1)
