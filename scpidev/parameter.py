@@ -1,4 +1,3 @@
-import logging
 import re
 
 from . import utils
@@ -70,9 +69,6 @@ class SCPIParameter():
     def match(self, test_string):
         """Return ``True`` if ``test_string`` matches the parameter's 
         syntax. ``False`` otherwise."""
-        logging.debug(
-            "Testing '{}' in '{}'?"
-            .format(test_string, self.get_parameter_string()))
         for value in self.get_value_list():
             if value.match(test_string):
                 return True

@@ -1,4 +1,3 @@
-import logging
 import re
 
 from . import utils
@@ -38,10 +37,6 @@ class SCPIValue():
             if num_string:
                 self._type = SCPIValue.DISCRETE_N
             self._value = (req_string, opt_string, num_string)
-        if self._type == SCPIValue.NONE:
-            logging.warning(
-                "Detected a NONE typed SCPIValue. Value string = '{}'"
-                .format(value_string))
 
     def __repr__(self):
         return (
@@ -61,9 +56,6 @@ class SCPIValue():
 
     def match(self, test_string):
         test_string = test_string.lower()
-        logging.debug(
-            "Testing '{}' in '{}'"
-            .format(test_string, self))
         type = self.get_type()
         if type == SCPIValue.NUMERIC:
             if utils.REGEXP_NF.match(test_string):

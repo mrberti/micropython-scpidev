@@ -1,4 +1,3 @@
-import logging
 import re
 
 from . import utils
@@ -70,10 +69,6 @@ class SCPICommand():
 
     def execute_if_match(self, parameter_string):
         if not self.match_parameters(parameter_string):
-            logging.debug("Parameter mismatch. Got '{}' but expected '{}'"
-                .format(
-                str(parameter_string),
-                str(self.get_parameter_string())))
             return None
         return self.execute(parameter_string)
 
@@ -81,7 +76,6 @@ class SCPICommand():
         parameter_string = utils.sanitize(parameter_string, True)
         args = parameter_string.split(",")
         kwargs = dict()
-        logging.debug("execute command: {}".format(repr(self._scpi_string)))
         return self._callback(*args, **kwargs)
 
     def is_query(self):
@@ -105,14 +99,8 @@ class SCPICommand():
             if self.is_query():
                 keyword_string = keyword_string.replace("?", "")
             else:
-                logging.debug(
-                    "This command is not a query, but the keyword ended with "
-                    "'?'.")
                 return False
         elif self.is_query():
-            logging.debug(
-                "This command is a query, but the keyword did not end with '?'"
-                ".")
             return False
 
         # Split keywords into a test string list against which each keyword 
@@ -126,35 +114,21 @@ class SCPICommand():
         for keyword in self.get_keyword_list():
             if keyword_i >= len(test_string_list):
                 if not keyword.is_optional():
-                    logging.debug(
-                        "Mismatch: Expected more non-optional keywords to "
-                        "follow.")
                     return False
                 continue
             test_string = test_string_list[keyword_i]
             req_string = keyword[0].lower()
             opt_string = req_string + keyword[1].lower()
-            logging.debug(
-                "Testing '{}' in '{}'"
-                .format(test_string, keyword))
             if not test_string.startswith(req_string):
                 if keyword.is_optional():
                     continue
                 else:
-                    logging.debug(
-                        "Mismatch: Required keyword '{}' not found. Got: '{}'"
-                        .format(req_string.upper(), test_string.upper()))
                     return False
             if not opt_string.startswith(test_string):
-                logging.debug(
-                    "Mismatch: Trailing characters not correct: '{}' =!= '{}'"
-                    .format(test_string, opt_string))
                 return False
             keyword_i += 1
         if keyword_i < len(test_string_list):
-            logging.debug("Mismatch: Could not parse all keywords.")
             return False
-        logging.debug("Matching OK.")
         return True
 
     def match_parameters(self, test_string):

@@ -6,7 +6,7 @@ def readme():
 
 setup(
     name='scpidev',
-    version='0.0.0',
+    version='0.0.1a1',
     author='Simon Bertling',
     author_email='simon.bertling@gmx.de',
     description='A python package to turn your device into an SCPI end point',
