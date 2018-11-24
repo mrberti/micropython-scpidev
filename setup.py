@@ -29,5 +29,5 @@ setup(
         "Programming Language :: Python :: 3.4",
         "Topic :: Scientific/Engineering :: Interface Engine/Protocol Translator",
     ],
-    scripts=["bin/send_tcp.py"],
+    # scripts=["bin/send_tcp.py"],
 )
