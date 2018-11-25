@@ -56,14 +56,15 @@ for cmd in command_strings:
     )
 
 # Crate the communication interfaces
-dev.create_interface("tcp")
-dev.create_interface("udp")
-dev.create_interface("serial", port="COM7", baudrate="500000", dsrdtr=1)
+dev.create_interface("tcp", ip="")
+dev.create_interface("udp", ip="")
+# dev.create_interface("serial", port="COM7", baudrate="500000", dsrdtr=1)
 
 try:
     dev.run()
 except KeyboardInterrupt:
     print("Exiting...")
+    exit()
 
 print("\n-- LIST COMMANDS: -------")
 print(dev.list_commands())

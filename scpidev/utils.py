@@ -61,9 +61,10 @@ def create_parameter_string(command_string):
     return parameter_string
 
 def get_local_ip(
-        remote_host="1.1.1.1", remote_port=80, default_ip="localhost"):
+        remote_host="1.1.1.1", remote_port=80, default_ip=""):
     """Try to find out the local ip by establishing a test connection to 
-    a known remote host."""
+    a known remote host. Using "0.0.0.0" or an empty string will lead to 
+    listening on all local addresses."""
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect((remote_host, remote_port))
