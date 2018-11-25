@@ -2,10 +2,10 @@ import logging
 import threading
 import time
 try:
-    from queue import Queue
+    from queue import Queue, Empty
 except ImportError:
     # Python2 compatibility
-    from Queue import Queue
+    from Queue import Queue, Empty
 
 from . import utils
 from .command import SCPICommand, SCPICommandList
@@ -159,7 +159,13 @@ class SCPIDevice():
             t.start()
 
         while True:
-            data_recv = self._recv_queue.get()
+            time.sleep(1)
+            while True:
+                try:
+                    data_recv = self._recv_queue.get(timeout=1)
+                except Empty:
+                    continue
+                break
             interface = data_recv[0]
             command_string = data_recv[1]
             result = self.execute(command_string)
