@@ -9,6 +9,7 @@
 /*.egg-info
 
 # Local folders like IDE garbage
+/.venv*/
 /.vscode/
 /.trash/
 
