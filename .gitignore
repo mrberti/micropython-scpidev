@@ -8,8 +8,9 @@
 # Python egg metadata, regenerated from source files by setuptoopls
 /*.egg-info
 
-# IDE garbage
+# Local folders like IDE garbage
 /.vscode/
+/.trash/
 
 # Supplementary documents
 /doc_local/
