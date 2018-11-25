@@ -9,10 +9,11 @@ upload:
 	twine upload dist/*
 
 clean:
-	rm -rf .trash
-	mkdir -p .trash/pyc
-	-mv scpidev/__pycache__ .trash/scpidev/ 2>/dev/null; true
-	-mv scpidev/*/*.pyc .trash/pyc/ 2>/dev/null; true
-	-mv build .trash 2>/dev/null; true
-	-mv dist .trash 2>/dev/null; true
-	-mv scpidev.egg-info .trash 2>/dev/null; true
+#	rm -rf .trash
+	mkdir -p .trash/scpidev/pyc
+	-mv -f scpidev/__pycache__ .trash/scpidev/ 2>/dev/null; true
+	-mv -f scpidev/tests/__pycache__ .trash/scpidev/tests/ 2>/dev/null; true
+	-mv -f scpidev/*/*.pyc .trash/scpidev/pyc/ 2>/dev/null; true
+	-mv -f build .trash 2>/dev/null; true
+	-mv -f dist .trash 2>/dev/null; true
+	-mv -f scpidev.egg-info .trash 2>/dev/null; true
