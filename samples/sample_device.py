@@ -1,5 +1,6 @@
 import logging
 import time
+import threading
 import scpidev
 
 FORMAT = "%(levelname)s: %(message)s"
@@ -57,32 +58,26 @@ for cmd in command_strings:
 
 # Crate the communication interfaces
 dev.create_interface("tcp")
-dev.create_interface("udp")
+# dev.create_interface("udp")
 # dev.create_interface("serial", port="COM7", baudrate="500000", dsrdtr=1)
 
+t = threading.Thread(target=dev.run)
+t.start()
+time.sleep(2)
+dev.stop()
+t.join()
+
+t = threading.Thread(target=dev.run)
+t.start()
 try:
-    dev.run()
+    while True:
+        time.sleep(1)
 except KeyboardInterrupt:
-    print("Exiting...")
-    exit()
+    dev.stop()
+exit()
 
-print("\n-- LIST COMMANDS: -------")
-print(dev.list_commands())
-
-
-print("\n-- EXECUTE: -------------")
-
-for cmd_str in test_commands:
-    print(cmd_str)
-    dev.execute(cmd_str)
-
-print("\n-- COMMAND HISTORY: ------")
-for c in dev.get_command_history():
-    print(c)
-
-print("\n-- ALARMS: --------------")
-while True:
-    alarm = dev.get_last_alarm()
-    if alarm is None:
-        break
-    print(alarm)
+# try:
+#     dev.run()
+# except KeyboardInterrupt:
+#     dev.stop()
+#     exit()

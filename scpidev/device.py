@@ -20,10 +20,13 @@ class SCPIDevice():
     def __init__(self, name=""):
         """Todo: Add more parameters, e.g. *IDN strings"""
         self._command_list = SCPICommandList()
+        self._command_history = list()
         self._alarm_state = False
         self._alarm_trace = list()
-        self._command_history = list()
         self._interface_list = list()
+        self._interface_type_list = list()
+        self._is_running = threading.Event()
+        self._watchdog_running = threading.Event()
 
     def get_command_list(self):
         """Return a list of command objects."""
@@ -116,22 +119,28 @@ class SCPIDevice():
         """Return a list which contains all succesfully executed commands."""
         return self._command_history
 
-    def create_interface(self, type, *args, **kwargs):
-        """Create a communication interface.
-
-        Currently, these types are supported:
-        - TCP
-        - UDP
-        - Serial
-        """
-        type = type.lower()
+    def _instantiate_interface(self, type, *args, **kwargs):
         if type == "tcp":
             interface = SCPIInterfaceTCP(*args, **kwargs)
         elif type == "udp":
             interface = SCPIInterfaceUDP(*args, **kwargs)
         elif type == "serial":
             interface = SCPIInterfaceSerial(*args, **kwargs)
-        self._interface_list.append(interface)
+        return interface
+
+    def create_interface(self, type, *args, **kwargs):
+        """Create a communication interface. The actual instantiation will be 
+        done when the interface is actually needed.
+
+        Currently, these types are supported:
+        - TCP
+        - UDP
+        - Serial
+        """
+        self._interface_type_list = list()
+        type = type.lower()
+        interface_type = (type, args, kwargs)
+        self._interface_type_list.append(interface_type)
 
     def run(self):
         """Start listening on the previously created interfaces and execute 
@@ -142,49 +151,86 @@ class SCPIDevice():
         Todo:
         - Implement parallel execution tasks
         """
-        self._thread_list = list()
         self._recv_queue = Queue() # Todo: Maxsize
+        self._thread_list = list()
+        self._interface_list = list()
+
+        if not self._interface_type_list:
+            logging.error("Cannot run: No interfaces were specified.")
+            return
 
         self.start_watchdog()
 
-        if not self._interface_list:
-            raise Exception("Cannot run: No interface specified.")
+        # Instantiate the interfaces.
+        for interface_type in self._interface_type_list:
+            type = interface_type[0]
+            args = interface_type[1]
+            kwargs = interface_type[2]
+            interface = self._instantiate_interface(type, args, kwargs)
+            self._interface_list.append(interface)
 
+        # Create threads for each interface's data handler.
         for interface in self._interface_list:
             args = (self._recv_queue,)
             t = threading.Thread(
                 target=interface.data_handler, name=str(interface), args=args)
             self._thread_list.append(t)
-            t.daemon = True
+            # t.daemon = True
             t.start()
 
-        while True:
+        # As long as we did not receive a stop command, we try to get the data 
+        # from the receive queue and execute a command.
+        self._is_running.set()
+        while self._is_running.is_set():
             time.sleep(1)
-            while True:
+            while self._is_running.is_set():
                 try:
                     data_recv = self._recv_queue.get(timeout=1)
                 except Empty:
                     continue
                 break
-            interface = data_recv[0]
-            command_string = data_recv[1]
-            result = self.execute(command_string)
-            # Todo: return data
-            if result is not None:
-                interface.write(str(result))
+            if self._is_running.is_set():
+                interface = data_recv[0]
+                command_string = data_recv[1]
+                result = self.execute(command_string)
+                # Todo: return data
+                if result is not None:
+                    interface.write(str(result))
 
-        print("Server stopped...")
+        # Do not forget to clean-up.
+        self.stop_watchdog()
+        logging.debug("'run()' has finished.")
+
+
+    def stop(self, timeout=0):
+        self._is_running.clear()
+        for interface in self._interface_list:
+            interface.stop()
+        for thread in self._thread_list:
+            thread.join(timeout=timeout)
+        logging.debug("All data handlers have finished.")
 
     def start_watchdog(self):
         # Todo: implement an intelligent watchdog
-        watchdog_thread = threading.Thread(
+        self._watchdog_thread = threading.Thread(
             target=self._watchdog_handler, name="Watchdog")
-        watchdog_thread.daemon = True
-        watchdog_thread.start()
+        self._watchdog_thread.daemon = False
+        self._watchdog_running.set()
+        self._watchdog_thread.start()
+
+    def stop_watchdog(self):
+        self._watchdog_running.clear()
+        self._watchdog_thread.join()
 
     def _watchdog_handler(self):
         """The watchdog should periodically check for deadlocks or other 
         inconsistencies. Todo: implement."""
-        while True:
-            logging.debug("Watchdog alive.")
-            time.sleep(100)
+        iterations = 0
+        while self._watchdog_running.is_set():
+            if iterations < 5:
+                iterations += 1
+            else:
+                logging.debug("Watchdog alive.")
+                iterations = 0
+            time.sleep(1)
+        logging.debug("Watchdog stopped.")

@@ -18,7 +18,28 @@ except ImportError:
 from . import utils
 
 
-class SCPIInterfaceTCP(socket.socket):
+class SCPIInterfaceBase(object):
+    """The base class for interfaces. Inherited classes must to implement the 
+    following methods:
+    
+    def write(self, data):
+        return bytes_written
+
+    def data_handler(self, recv_queue):
+        return
+
+    def close(self):
+        return
+    """
+    def __init__(self):
+        self._is_running = False
+
+    def stop(self):
+        self._is_running = False
+        self.close()
+
+
+class SCPIInterfaceTCP(socket.socket, SCPIInterfaceBase):
     def __init__(self, *args, **kwargs):
         super(SCPIInterfaceTCP, self).__init__(
             socket.AF_INET, socket.SOCK_STREAM)
@@ -32,7 +53,7 @@ class SCPIInterfaceTCP(socket.socket):
             port = 5025
         self._addr = (local_host, port)
 
-    def _open(self):
+    def open(self):
         super(SCPIInterfaceTCP, self).__init__(
             socket.AF_INET, socket.SOCK_STREAM)
         self.bind(self._addr)
@@ -50,17 +71,18 @@ class SCPIInterfaceTCP(socket.socket):
         return bytes_written
 
     def data_handler(self, recv_queue):
-        while True:
+        self._is_running = True
+        while self._is_running:
             try:
-                self._open()
+                self.open()
             except Exception as e:
                 logging.warning(
-                    "Could not open TCP interface {}. Exception: {}"
-                    .format(str(self), str(e)))
+                    "Could not open TCP interface {}. Exception: {}. Try "
+                    "again...".format(str(self), str(e)))
                 time.sleep(1)
                 continue
             try:
-                while True:
+                while self._is_running:
                     data_recv = self._file.readline().strip()
                     if not data_recv:
                         logging.debug("TCP connection closed by client.")
@@ -76,12 +98,11 @@ class SCPIInterfaceTCP(socket.socket):
                     "Could not Receive data on interface {}. Exception: {}"
                     .format(self, str(e)))
             time.sleep(1)
+        logging.info("TCP handler stopped. {}".format(self._addr))
 
 
-class SCPIInterfaceUDP(socket.socket):
+class SCPIInterfaceUDP(socket.socket, SCPIInterfaceBase):
     def __init__(self, *args, **kwargs):
-        super(SCPIInterfaceUDP, self).__init__(
-            socket.AF_INET, socket.SOCK_DGRAM)
         if "ip" in kwargs:
             local_host = kwargs["ip"]
         else:
@@ -91,10 +112,8 @@ class SCPIInterfaceUDP(socket.socket):
         else:
             port = 5025
         self._addr = (local_host, port)
-        self.bind(self._addr)
         self._addr_target = None
-        logging.info("UDP socket bound to {}.".format(self._addr))
-    
+
     def write(self, data):
         """Data will be sent to the host which most recently sent data to 
         this interface."""
@@ -103,31 +122,50 @@ class SCPIInterfaceUDP(socket.socket):
         if self._addr_target is not None:
             self.sendto(data, self._addr_target)
 
+    def open(self):
+        super(SCPIInterfaceUDP, self).__init__(
+            socket.AF_INET, socket.SOCK_DGRAM)
+        self.bind(self._addr)
+        logging.info("UDP socket bound to {}.".format(self._addr))
+
     def data_handler(self, recv_queue):
-        """This function should never return."""
-        while True:
-            (data_recv, self._addr_target) = self.recvfrom(1024)
-            data_recv = data_recv.decode("utf8").strip()
-            data_recv_list = data_recv.split("\n")
-            for data_recv in data_recv_list:
-                if data_recv:
-                    data = (self, data_recv)
-                    recv_queue.put(data)
-                    logging.debug("UDP received data from {}: {}".format(
-                        repr(self._addr_target), repr(data_recv)))
+        self._is_running = True
+        while self._is_running:
+            try:
+                self.open()
+            except Exception as e:
+                logging.info("Could not open UDP interface {}. Exception: {}. "
+                    "Try again...".format(str(self._addr), str(e)))
+                time.sleep(1)
+                continue
+            while self._is_running:
+                try:
+                    (data_recv, self._addr_target) = self.recvfrom(1024)
+                except:
+                    break
+                data_recv = data_recv.decode("utf8").strip()
+                data_recv_list = data_recv.split("\n")
+                for data_recv in data_recv_list:
+                    if data_recv:
+                        data = (self, data_recv)
+                        recv_queue.put(data)
+                        logging.debug("UDP received data from {}: {}".format(
+                            repr(self._addr_target), repr(data_recv)))
+        logging.info("UDP handler stopped. {}".format(self._addr))
 
 if HAS_SERIAL:
-    class SCPIInterfaceSerial(serial.Serial):
+    class SCPIInterfaceSerial(serial.Serial, SCPIInterfaceBase):
         def data_handler(self, recv_queue):
             while True:
                 time.sleep(1)
 else:
-    class SCPIInterfaceSerial(object):
+    class SCPIInterfaceSerial(SCPIInterfaceBase):
         def __init__(self, *args, **kwargs):
             logging.error("An serial interface was instantiated, but the "
                 "package pyserial is not installed. Attemps in establishing "
                 "serial communication will result in wild Exceptions.")
 
         def data_handler(self, recv_queue):
-            while True:
+            self._is_running = True
+            while self._is_running:
                 time.sleep(1)
