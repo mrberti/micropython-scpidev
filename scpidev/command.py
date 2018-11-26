@@ -6,13 +6,12 @@ from .parameter import SCPIParameter, SCPIParameterList
 
 
 class SCPICommand():
-    def __init__(self, scpi_string, callback, name="", description=""):
+    def __init__(self, scpi_string, action, name="", description=""):
         scpi_string = utils.sanitize(scpi_string)
-        self._callback = callback
+        self._action = action
         self._description = description
-        self._keyword_string = utils.create_keyword_string(scpi_string)
+        self._keyword_string, self._parameter_string = utils.create_command_tuple(scpi_string)
         self._keyword_list = SCPIKeywordList(self._keyword_string)
-        self._parameter_string = utils.create_parameter_string(scpi_string)
         self._parameter_list = SCPIParameterList(self._parameter_string)
         self._scpi_string = self._keyword_string + " " + self._parameter_string
         if name:
@@ -30,8 +29,8 @@ class SCPICommand():
     def __str__(self):
         return self._scpi_string
 
-    def get_callback(self):
-        return self._callback
+    def get_action_name(self):
+        return self._action.__name__
 
     def get_keyword_string(self):
         return self._keyword_string
@@ -51,41 +50,53 @@ class SCPICommand():
             parameter_string_list.append(parameter.get_parameter_string())
         return parameter_string_list
 
-    def add_parameter(self, 
-            name, 
-            optional="False", 
-            value_list=list(), 
-            default=None, 
-            parameter_string=""):
-        """Add a parameter at the end of the parameter list."""
-        self._parameter_list.append(
-            SCPIParameter(
-                name=name, 
-                optional=optional, 
-                value_list=value_list, 
-                default=default, 
-                parameter_string=parameter_string,
-        ))
+    # def add_parameter(self, 
+    #         name, 
+    #         optional="False", 
+    #         value_list=list(), 
+    #         default=None, 
+    #         parameter_string=""):
+    #     """Add a parameter at the end of the parameter list."""
+    #     self._parameter_list.append(
+    #         SCPIParameter(
+    #             name=name, 
+    #             optional=optional, 
+    #             value_list=value_list, 
+    #             default=default, 
+    #             parameter_string=parameter_string,
+    #     ))
 
-    def execute_if_match(self, parameter_string):
-        if not self.match_parameters(parameter_string):
+    def execute_if_match(self, command_string):
+        """Execute the attached action if the ``command_string`` matches the 
+        commands syntax. The first parameter will alwas be the full 
+        ``command_string``. After that, a list of parsed parameters will 
+        follow."""
+        command_string = utils.sanitize(command_string, False)
+        if not self.match(command_string):
             return None
-        return self.execute(parameter_string)
+        return self.execute(command_string)
 
-    def execute(self, parameter_string):
-        parameter_string = utils.sanitize(parameter_string, True)
-        args = parameter_string.split(",")
+    def execute(self, command_string):
+        """Execute the attached action. The first parameter will alwas be the 
+        full ``command_string``. After that, a list of parsed parameters will 
+        follow."""
+        keyword_string, parameter_string = utils.create_command_tuple(command_string)
+        args = list()
+        args.append(command_string)
+        if parameter_string:
+            args = args + parameter_string.split(",")
+        # Todo: create a named list, which corresponds to parameter names 
+        # defined in the command creation string.
         kwargs = dict()
-        return self._callback(*args, **kwargs)
+        return self._action(*args, **kwargs)
 
     def is_query(self):
         return self._is_query
 
     def match(self, command_string):
         """Return ``True`` if ``command_string`` matches the instance's 
-        keyword and parameters. ``False`` otherwise."""
-        keyword_string = utils.create_keyword_string(command_string)
-        parameter_string = utils.create_parameter_string(command_string)
+        keyword AND parameters. ``False`` otherwise."""
+        keyword_string, parameter_string = utils.create_command_tuple(command_string)
         matches_keyword = self.match_keyword(keyword_string)
         matches_parameter = self.match_parameters(parameter_string)
         return matches_keyword and matches_parameter

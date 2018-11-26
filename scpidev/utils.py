@@ -60,6 +60,14 @@ def create_parameter_string(command_string):
     parameter_string = "".join(command_string.split(" ")[1:])
     return parameter_string
 
+def create_command_tuple(command_string):
+    """Create a tuple which contains the keyword and parameter strings. The 
+    input is sanatized first."""
+    command_string = sanitize(command_string, False)
+    c = create_keyword_string(command_string)
+    p = create_parameter_string(command_string)
+    return (c,p)
+
 def get_local_ip(
         remote_host="1.1.1.1", remote_port=80, default_ip=""):
     """Try to find out the local ip by establishing a test connection to 

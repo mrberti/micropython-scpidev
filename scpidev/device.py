@@ -32,11 +32,11 @@ class SCPIDevice():
         """Return a list of command objects."""
         return self._command_list
 
-    def add_command(self, scpi_string, callback, name="", description=""):
-        """Add a command string and an associated callback."""
+    def add_command(self, scpi_string, action, name="", description=""):
+        """Add a command string and an associated action."""
         new_cmd = SCPICommand(
             scpi_string=scpi_string,
-            callback=callback,
+            action=action,
             name=name,
             description=description,
         )
@@ -91,9 +91,9 @@ class SCPIDevice():
         for cmd in self.get_command_list():
             if cmd.match(command_string):
                 match_found = True
-                fn_name = cmd.get_callback().__name__
-                parameter_string = utils.create_parameter_string(
-                    command_string)
+                fn_name = cmd.get_action_name()
+                parameter_string = utils.create_command_tuple(
+                    command_string)[1]
                 try:
                     result = cmd.execute(parameter_string)
                 except Exception as e:

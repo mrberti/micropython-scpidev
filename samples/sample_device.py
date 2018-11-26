@@ -7,7 +7,7 @@ FORMAT = "%(levelname)s: %(message)s"
 logging.basicConfig(format=FORMAT, level=logging.DEBUG)
 # logging.basicConfig(format=FORMAT, level=logging.INFO)
 
-# Define our callback functions
+# Define our action functions
 def test_function(*args, **kwargs):
     print("## Execute. ##")
     i = 0
@@ -53,7 +53,7 @@ dev = scpidev.SCPIDevice(
 for cmd in command_strings:
     dev.add_command(
         scpi_string=cmd,
-        callback=test_function,
+        action=test_function,
     )
 
 # Crate the communication interfaces
