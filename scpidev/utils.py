@@ -37,7 +37,8 @@ def sanitize(input, remove_all_spaces=False):
     sanitized = remove_non_ascii(sanitized)
     # Control characters which appear often in source code, e.g. new-line 
     # characters in multi-line python strings.
-    sanitized = re.sub(r"[\n\t]", r"", sanitized)
+    # Todo: Whitelist characters instead of blacklist
+    sanitized = re.sub(r"[\n\t\r]", r"", sanitized)
     # Spaces at the beginning of the string.
     sanitized = re.sub(r"(^ +)", r"", sanitized)
     if remove_all_spaces:
