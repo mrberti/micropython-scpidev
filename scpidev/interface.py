@@ -25,6 +25,9 @@ class SCPIInterfaceBase(object):
     def write(self, data):
         return bytes_written
 
+    def read_data(self):
+        return recv()
+
     def data_handler(self, recv_queue):
         return
 
@@ -41,8 +44,6 @@ class SCPIInterfaceBase(object):
 
 class SCPIInterfaceTCP(socket.socket, SCPIInterfaceBase):
     def __init__(self, *args, **kwargs):
-        super(SCPIInterfaceTCP, self).__init__(
-            socket.AF_INET, socket.SOCK_STREAM)
         if "ip" in kwargs:
             local_host = kwargs["ip"]
         else:
@@ -52,23 +53,68 @@ class SCPIInterfaceTCP(socket.socket, SCPIInterfaceBase):
         else:
             port = 5025
         self._addr = (local_host, port)
+        self._recv_string_rest = ""
 
-    def open(self):
         super(SCPIInterfaceTCP, self).__init__(
             socket.AF_INET, socket.SOCK_STREAM)
+        # Todo: Add exception handling if bind was not successfull
         self.bind(self._addr)
         self.listen(1)
         logging.info("TCP socket bound to {}.".format(self._addr))
         logging.info("TCP socket wating for connection...")
-        self._new_socket, self._remote_addr = self.accept()
-        self._file = self._new_socket.makefile(mode="rw")
+
+    def open(self):
+        self._socket_remote, self._remote_addr = self.accept()
         logging.info("TCP socket connection established: {}"
             .format(self._remote_addr))
+
+    def close(self):
+        self._close_remote()
+        super(SCPIInterfaceTCP, self).close()
+
+    def _close_remote(self):
+        try:
+            self._socket_remote.close()
+        except:
+            pass
     
     def write(self, data):
-        bytes_written = self._file.write(data)
-        self._file.flush()
+        bytes_written = self._socket_remote.send(data.encode("utf8"))
         return bytes_written
+
+    def read_data(self):
+        return self._socket_remote.recv(1024)
+
+    def readlines(self):
+        """Returns a list of lines with line end characters. This function is 
+        necessary, becase when using socket.makefile, the readline is blocking 
+        the thread.
+        
+        Todo: This function is quite a plague to implement. Need to find out 
+        better methods...
+        """
+        while True:
+            recv_data = self.read_data()
+            if not recv_data:
+                # Remote host closed the connection when an empty string is 
+                # received. In that case, the rest string buffer is cleared.
+                self._recv_string_rest = ""
+                return list([""])
+            logging.debug("TCP received data: {}".format(repr(recv_data)))
+            recv_string = self._recv_string_rest + recv_data.decode("utf8")
+            recv_string_list = recv_string.splitlines(True)
+            last_string = recv_string_list.pop()
+            if "\n" in last_string:
+                self._recv_string_rest = ""
+                recv_string_list.append(last_string)
+                break
+            else:
+                self._recv_string_rest = last_string
+        return recv_string_list
+
+    def readline(self):
+        """Todo: maybe readline is better than readlines."""
+        raise NotImplementedError
 
     def data_handler(self, recv_queue):
         self._is_running = True
@@ -83,21 +129,18 @@ class SCPIInterfaceTCP(socket.socket, SCPIInterfaceBase):
                 continue
             try:
                 while self._is_running:
-                    data_recv = self._file.readline().strip()
-                    if not data_recv:
+                    recv_string_list = self.readlines()
+                    if not recv_string_list[0]:
                         logging.debug("TCP connection closed by client.")
                         break
-                    logging.debug("TCP received data: {}".format(
-                        repr(data_recv)))
-                    # self.write(data_recv)
-                    data = (self, data_recv)
-                    recv_queue.put(data)
-                self.close()
+                    for recv_string in recv_string_list:
+                        if recv_string:
+                            data = (self, recv_string)
+                            recv_queue.put(data)
             except Exception as e:
                 logging.warning(
                     "Could not Receive data on interface {}. Exception: {}"
                     .format(self, str(e)))
-            time.sleep(1)
         logging.info("TCP handler stopped. {}".format(self._addr))
 
 
