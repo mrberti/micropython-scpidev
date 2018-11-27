@@ -69,10 +69,7 @@ class SCPIParameter():
     def match(self, test_string):
         """Return ``True`` if ``test_string`` matches the parameter's 
         syntax. ``False`` otherwise."""
-        for value in self.get_value_list():
-            if value.match(test_string):
-                return True
-        return False
+        return test_string in self.get_value_list()
 
 
 class SCPIParameterList(list):

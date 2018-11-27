@@ -69,7 +69,7 @@ class SCPIValue():
         elif type == SCPIValue.DISCRETE or type == SCPIValue.DISCRETE_N:
             req_string = self.get_value()[0].lower()
             opt_string = req_string + self.get_value()[1].lower()
-            if req_string.startswith(test_string):
+            if test_string.startswith(req_string):
                 if opt_string.startswith(test_string):
                     return True
         elif type == SCPIValue.ASCII_STRING:
@@ -95,6 +95,12 @@ class SCPIValueList(list):
     def __repr__(self):
         ret = "["
         for value in self:
-            ret = ret + str(value) + " "
+            ret = ret + str(value) + ", "
         ret = ret + "]"
         return ret
+
+    def __contains__(self, val):
+        for value in self:
+            if value.match(val):
+                return True
+        return False
