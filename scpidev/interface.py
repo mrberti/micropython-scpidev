@@ -1,6 +1,8 @@
 import logging
 import socket
 import time
+import threading
+import abc
 try:
     from queue import Queue
 except ImportError:
@@ -19,49 +21,47 @@ from . import utils
 
 
 class SCPIInterfaceBase(object):
-    """The base class for interfaces. Inherited classes must to implement the 
-    following methods:
-    
-    def write(self, data):
-        return bytes_written
-
-    def read_data(self):
-        return recv()
-
-    def data_handler(self, recv_queue):
-        return
-
-    def close(self):
-        return
-    """
+    """The abstract base class for interfaces. Inherited classes must 
+    implement the abstract methods."""
     def __init__(self):
-        self._is_running = False
+        self._is_running = threading.Event()
 
     def stop(self):
-        self._is_running = False
+        self._is_running.clear()
         self.close()
+
+    @abc.abstractmethod
+    def write(self, data):
+        pass
+
+    @abc.abstractmethod
+    def data_handler(self, recv_queue):
+        pass
+
+    @abc.abstractmethod
+    def close(self):
+        pass
 
 
 class SCPIInterfaceTCP(socket.socket, SCPIInterfaceBase):
     def __init__(self, *args, **kwargs):
+        SCPIInterfaceBase.__init__(self)
+        super(SCPIInterfaceTCP, self).__init__(
+            socket.AF_INET, socket.SOCK_STREAM)
         if "ip" in kwargs:
             local_host = kwargs["ip"]
         else:
-            local_host = utils.get_local_ip()
+            local_host = utils.get_local_ip(default_ip="")
         if "port" in kwargs:
             port = kwargs["port"]
         else:
             port = 5025
         self._addr = (local_host, port)
         self._recv_string_rest = ""
-
-        super(SCPIInterfaceTCP, self).__init__(
-            socket.AF_INET, socket.SOCK_STREAM)
-        # Todo: Add exception handling if bind was not successfull
         self.bind(self._addr)
         self.listen(1)
         logging.info("TCP socket bound to {}.".format(self._addr))
-        logging.info("TCP socket wating for connection...")
+        logging.info("TCP socket waiting for connection...")
 
     def open(self):
         self._socket_remote, self._remote_addr = self.accept()
@@ -102,23 +102,20 @@ class SCPIInterfaceTCP(socket.socket, SCPIInterfaceBase):
                 return list([""])
             logging.debug("TCP received data: {}".format(repr(recv_data)))
             recv_string = self._recv_string_rest + recv_data.decode("utf8")
-            recv_string_list = recv_string.splitlines(True)
-            last_string = recv_string_list.pop()
-            if "\n" in last_string:
-                self._recv_string_rest = ""
-                recv_string_list.append(last_string)
-                break
-            else:
-                self._recv_string_rest = last_string
-        return recv_string_list
-
-    def readline(self):
-        """Todo: maybe readline is better than readlines."""
-        raise NotImplementedError
+            logging.debug("Buffer: {}".format(repr(recv_string)))
+            if "\n" in recv_string:
+                recv_string_list = recv_string.splitlines(True)
+                last_string = recv_string_list.pop()
+                if "\n" in last_string:
+                    self._recv_string_rest = ""
+                    recv_string_list.append(last_string)
+                else:
+                    self._recv_string_rest = last_string
+                return recv_string_list
 
     def data_handler(self, recv_queue):
-        self._is_running = True
-        while self._is_running:
+        self._is_running.set()
+        while self._is_running.is_set():
             try:
                 self.open()
             except Exception as e:
@@ -146,6 +143,9 @@ class SCPIInterfaceTCP(socket.socket, SCPIInterfaceBase):
 
 class SCPIInterfaceUDP(socket.socket, SCPIInterfaceBase):
     def __init__(self, *args, **kwargs):
+        SCPIInterfaceBase.__init__(self)
+        super(SCPIInterfaceUDP, self).__init__(
+            socket.AF_INET, socket.SOCK_DGRAM)
         if "ip" in kwargs:
             local_host = kwargs["ip"]
         else:
@@ -166,14 +166,12 @@ class SCPIInterfaceUDP(socket.socket, SCPIInterfaceBase):
             self.sendto(data, self._addr_target)
 
     def open(self):
-        super(SCPIInterfaceUDP, self).__init__(
-            socket.AF_INET, socket.SOCK_DGRAM)
         self.bind(self._addr)
         logging.info("UDP socket bound to {}.".format(self._addr))
 
     def data_handler(self, recv_queue):
-        self._is_running = True
-        while self._is_running:
+        self._is_running.set()
+        while self._is_running.is_set():
             try:
                 self.open()
             except Exception as e:
@@ -181,7 +179,7 @@ class SCPIInterfaceUDP(socket.socket, SCPIInterfaceBase):
                     "Try again...".format(str(self._addr), str(e)))
                 time.sleep(1)
                 continue
-            while self._is_running:
+            while self._is_running.is_set():
                 try:
                     (data_recv, self._addr_target) = self.recvfrom(1024)
                 except:
@@ -198,17 +196,21 @@ class SCPIInterfaceUDP(socket.socket, SCPIInterfaceBase):
 
 if HAS_SERIAL:
     class SCPIInterfaceSerial(serial.Serial, SCPIInterfaceBase):
+        def __init__(self, *args, **kwargs):
+            SCPIInterfaceBase.__init__(self)
+
         def data_handler(self, recv_queue):
             while True:
                 time.sleep(1)
 else:
     class SCPIInterfaceSerial(SCPIInterfaceBase):
         def __init__(self, *args, **kwargs):
+            SCPIInterfaceBase.__init__(self)
             logging.error("An serial interface was instantiated, but the "
                 "package pyserial is not installed. Attemps in establishing "
                 "serial communication will result in wild Exceptions.")
 
         def data_handler(self, recv_queue):
-            self._is_running = True
-            while self._is_running:
+            self._is_running.set()
+            while self._is_running.is_set():
                 time.sleep(1)
