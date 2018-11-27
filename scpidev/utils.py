@@ -8,15 +8,22 @@ REGEXP_STRING_NR1 = r"[\+-]?[0-9]+"
 REGEXP_STRING_NR2 = r"[\+-]?(?:(?:[0-9]*\.[0-9]+)|(?:[0-9]+\.[0-9]*))"
 # NR3: Floating point with exponential, e.g. 1e-6
 REGEXP_STRING_NR3 = REGEXP_STRING_NR2 + r"[eE][\+-]?[0-9]+"
-# Nf: NR1, NR2 or NR3
-REGEXP_STRING_NF = "|".join(
+# NRf: NR1, NR2 or NR3
+REGEXP_STRING_NRF = "|".join(
     [REGEXP_STRING_NR3, REGEXP_STRING_NR2, REGEXP_STRING_NR1])
+
+# All non-ASCII characters
+REGEXP_NON_ASCII_STRING = r"[^\x00-\x7f]"
+# All non-ASCII printable characters (includes \n)
+REGEXP_SANATIZE_BLACKLIST_STRING = r"[^\x20-\x7e]"
 
 # Compile regexps for later use
 REGEXP_NR1 = re.compile(REGEXP_STRING_NR1)
 REGEXP_NR2 = re.compile(REGEXP_STRING_NR2)
 REGEXP_NR3 = re.compile(REGEXP_STRING_NR3)
-REGEXP_NF = re.compile(REGEXP_STRING_NF)
+REGEXP_NRF = re.compile(REGEXP_STRING_NRF)
+REGEXP_SANATIZE_BLACKLIST = re.compile(REGEXP_SANATIZE_BLACKLIST_STRING)
+REGEXP_NON_ASCII = re.compile(REGEXP_NON_ASCII_STRING)
 
 def findfirst(pattern, string, flags=0):
     """Return the first string of a regular expression match or an empty 
@@ -29,16 +36,12 @@ def findfirst(pattern, string, flags=0):
     return result
 
 def remove_non_ascii(string):
-    return re.sub(r'[^\x00-\x7f]',r'', string)
+    return REGEXP_NON_ASCII.sub(r"", string)
 
 def sanitize(input, remove_all_spaces=False):
     """Remove excessive and wrong characters as much as possible."""
-    sanitized = input
-    sanitized = remove_non_ascii(sanitized)
-    # Control characters which appear often in source code, e.g. new-line 
-    # characters in multi-line python strings.
-    # Todo: Whitelist characters instead of blacklist
-    sanitized = re.sub(r"[\n\t\r]", r"", sanitized)
+    # All non-printable ASCII characters are removed
+    sanitized = REGEXP_SANATIZE_BLACKLIST.sub(r"", input)
     # Spaces at the beginning of the string.
     sanitized = re.sub(r"(^ +)", r"", sanitized)
     if remove_all_spaces:
