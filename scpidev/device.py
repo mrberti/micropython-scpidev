@@ -32,6 +32,10 @@ class SCPIDevice():
         """Return a list of command objects."""
         return self._command_list
 
+    def get_command_history(self):
+        """Return a list which contains all succesfully executed commands."""
+        return self._command_history
+
     def add_command(self, scpi_string, action, name="", description=""):
         """Add a command string and an associated action."""
         new_cmd = SCPICommand(
@@ -56,7 +60,7 @@ class SCPIDevice():
         self._alarm_trace.append(alarm_string)
         logging.info(alarm_string)
 
-    def get_last_alarm(self, clear_alarm_when_empty=True):
+    def get_alarm(self, clear_alarm_when_empty=True):
         """Return the most recent alarm and remove it from the alarm trace. If 
         ``clear_alarm_when_empty`` is True, the alarm status will be cleared 
         if all alarms got consumed."""
@@ -76,6 +80,34 @@ class SCPIDevice():
         if clear_history:
             self._alarm_trace = list()
 
+    def create_interface(self, type, *args, **kwargs):
+        """Create a communication interface. The actual instantiation will be 
+        done when the interface is actually needed. The application programmer 
+        needs to make sure that assigning the same resource more than 1 time 
+        is avoided.
+
+        Currently, these types are supported:
+        - TCP
+        - UDP
+        - Serial (not yet implemented)
+        """
+        type = type.lower()
+        # The interfaces will only be defined here. The instantiation will 
+        # happen later when ``run()`` is called. This insures that after 
+        # multiple ``run()`` calls new interfaces are instantiated.
+        self._interface_type_list = list()
+        interface_type = (type, args, kwargs)
+        self._interface_type_list.append(interface_type)
+
+    def _instantiate_interface(self, type, *args, **kwargs):
+        if type == "tcp":
+            interface = SCPIInterfaceTCP(*args, **kwargs)
+        elif type == "udp":
+            interface = SCPIInterfaceUDP(*args, **kwargs)
+        elif type == "serial":
+            interface = SCPIInterfaceSerial(*args, **kwargs)
+        return interface
+
     def execute(self, command_string):
         """Search a matching command and execute it. If exceptions arise 
         during execution, they are catched and an alarm is set.
@@ -92,17 +124,15 @@ class SCPIDevice():
             if cmd.match(command_string):
                 match_found = True
                 fn_name = cmd.get_action_name()
-                parameter_string = utils.create_command_tuple(
-                    command_string)[1]
                 try:
-                    result = cmd.execute(parameter_string)
+                    result = cmd.execute(command_string)
                 except Exception as e:
                     reason = (
                         "Exception during execution of function {}: {}."
                         .format(repr(fn_name), str(e)))
                     break
-                cmd_hist_string = "{cs} => {cmd} => {fn} => {res}".format(
-                    cs=repr(command_string), cmd=repr(cmd), fn=fn_name, 
+                cmd_hist_string = "{cs} => {fn} => {res}".format(
+                    cs=repr(command_string), fn=fn_name, 
                     res=repr(result))
                 self._command_history.append(cmd_hist_string)
                 executed = True
@@ -115,38 +145,10 @@ class SCPIDevice():
                 .format(c=repr(command_string), r=reason))
         return result
 
-    def get_command_history(self):
-        """Return a list which contains all succesfully executed commands."""
-        return self._command_history
-
-    def _instantiate_interface(self, type, *args, **kwargs):
-        if type == "tcp":
-            interface = SCPIInterfaceTCP(*args, **kwargs)
-        elif type == "udp":
-            interface = SCPIInterfaceUDP(*args, **kwargs)
-        elif type == "serial":
-            interface = SCPIInterfaceSerial(*args, **kwargs)
-        return interface
-
-    def create_interface(self, type, *args, **kwargs):
-        """Create a communication interface. The actual instantiation will be 
-        done when the interface is actually needed.
-
-        Currently, these types are supported:
-        - TCP
-        - UDP
-        - Serial
-        """
-        self._interface_type_list = list()
-        type = type.lower()
-        interface_type = (type, args, kwargs)
-        self._interface_type_list.append(interface_type)
-
     def run(self):
-        """Start listening on the previously created interfaces and execute 
-        commands when a message is received.
-
-        This function should usually run forever.
+        """Start listening on the previously by ``create_interface()`` defined 
+        interfaces and execute commands when a message is received. This 
+        function will run until ``stop()`` is called.
 
         Todo:
         - Implement parallel execution tasks
@@ -182,20 +184,28 @@ class SCPIDevice():
         # from the receive queue and execute a command.
         self._is_running.set()
         while self._is_running.is_set():
-            time.sleep(1)
+            # Get data from the queue which will be written by the interface
+            # data handlers.This timeout -> continue loop is necessary because 
+            # otherwise, Queue.get() would block KeyboardInterrupts.
             while self._is_running.is_set():
                 try:
                     data_recv = self._recv_queue.get(timeout=1)
                 except Empty:
                     continue
                 break
+
+            # Execute the received command string and return the result (if 
+            # any).
             if self._is_running.is_set():
                 interface = data_recv[0]
                 command_string = data_recv[1]
                 result = self.execute(command_string)
-                # Todo: return data
                 if result is not None:
-                    interface.write(str(result))
+                    try:
+                        interface.write(str(result))
+                    except Exception as e:
+                        logging.info("Could not send data to {}.  Exception: "
+                        "{}.".format(str(interface), str(e)))
 
         # Do not forget to clean-up.
         self.stop_watchdog()
@@ -211,7 +221,6 @@ class SCPIDevice():
         logging.debug("All data handlers have finished.")
 
     def start_watchdog(self):
-        # Todo: implement an intelligent watchdog
         self._watchdog_thread = threading.Thread(
             target=self._watchdog_handler, name="Watchdog")
         self._watchdog_thread.daemon = False
@@ -225,12 +234,14 @@ class SCPIDevice():
     def _watchdog_handler(self):
         """The watchdog should periodically check for deadlocks or other 
         inconsistencies. Todo: implement."""
+        # Todo: implement an intelligent watchdog
         iterations = 0
         while self._watchdog_running.is_set():
-            if iterations < 5:
+            if iterations < 10:
                 iterations += 1
             else:
-                logging.debug("Watchdog alive.")
+                logging.debug("{}: Watchdog alive. Alarms: {}."
+                    .format(time.time(), len(self._alarm_trace)))
                 iterations = 0
             time.sleep(1)
-        logging.debug("Watchdog stopped.")
+        logging.info("Watchdog stopped.")
