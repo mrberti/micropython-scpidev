@@ -80,8 +80,9 @@ class SCPICommand():
         """Execute the attached action. The first parameter will alwas be the 
         full ``command_string``. After that, a list of parsed parameters will 
         follow."""
-        keyword_string, parameter_string = utils.create_command_tuple(command_string)
+        parameter_string = utils.create_command_tuple(command_string)[1]
         args = list()
+        # The first argument will be the full command_string.
         args.append(command_string)
         if parameter_string:
             args = args + parameter_string.split(",")
