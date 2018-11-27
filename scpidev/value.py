@@ -58,7 +58,7 @@ class SCPIValue():
         test_string = test_string.lower()
         type = self.get_type()
         if type == SCPIValue.NUMERIC:
-            if utils.REGEXP_NF.match(test_string):
+            if utils.REGEXP_NRF.match(test_string):
                 return True
         elif type == SCPIValue.BOOLEAN:
             if (test_string == "ON" 
