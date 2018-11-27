@@ -58,10 +58,18 @@ class SCPIInterfaceTCP(socket.socket, SCPIInterfaceBase):
             port = 5025
         self._addr = (local_host, port)
         self._recv_string_rest = ""
-        self.bind(self._addr)
-        self.listen(1)
+        try:
+            self.bind(self._addr)
+            self.listen(1)
+        except Exception as e:
+            logging.warning("Could not open TCP interface {}. Exception: {}. "
+                .format(str(self._addr), str(e)))
+            raise e
         logging.info("TCP socket bound to {}.".format(self._addr))
         logging.info("TCP socket waiting for connection...")
+
+    def __str__(self):
+        return "TCP {}".format(self._addr)
 
     def open(self):
         self._socket_remote, self._remote_addr = self.accept()
@@ -85,7 +93,7 @@ class SCPIInterfaceTCP(socket.socket, SCPIInterfaceBase):
     def read_data(self):
         return self._socket_remote.recv(1024)
 
-    def readlines(self):
+    def _readlines(self):
         """Returns a list of lines with line end characters. This function is 
         necessary, becase when using socket.makefile, the readline is blocking 
         the thread.
@@ -112,6 +120,8 @@ class SCPIInterfaceTCP(socket.socket, SCPIInterfaceBase):
                 else:
                     self._recv_string_rest = last_string
                 return recv_string_list
+            else:
+                self._recv_string_rest = recv_string
 
     def data_handler(self, recv_queue):
         self._is_running.set()
@@ -126,7 +136,7 @@ class SCPIInterfaceTCP(socket.socket, SCPIInterfaceBase):
                 continue
             try:
                 while self._is_running:
-                    recv_string_list = self.readlines()
+                    recv_string_list = self._readlines()
                     if not recv_string_list[0]:
                         logging.debug("TCP connection closed by client.")
                         break
@@ -154,8 +164,19 @@ class SCPIInterfaceUDP(socket.socket, SCPIInterfaceBase):
             port = kwargs["port"]
         else:
             port = 5025
+        self._recv_string_rest = ""
         self._addr = (local_host, port)
-        self._addr_target = None
+        self._addr_target = None,
+        try:
+            self.bind(self._addr)
+        except Exception as e:
+            logging.warning("Could not open UDP interface {}. Exception: {}. "
+                .format(str(self._addr), str(e)))
+            raise e
+        logging.info("UDP socket bound to {}.".format(self._addr))
+
+    def __str__(self):
+        return "UDP {}".format(self._addr)
 
     def write(self, data):
         """Data will be sent to the host which most recently sent data to 
@@ -165,39 +186,54 @@ class SCPIInterfaceUDP(socket.socket, SCPIInterfaceBase):
         if self._addr_target is not None:
             self.sendto(data, self._addr_target)
 
-    def open(self):
-        self.bind(self._addr)
-        logging.info("UDP socket bound to {}.".format(self._addr))
+    def _readlines(self):
+        """Returns a list of lines with line end characters. This function is 
+        necessary, becase when using socket.makefile, the readline is blocking 
+        the thread.
+        
+        Todo: This function is quite a plague to implement. Need to find out 
+        better methods...
+        """
+        while True:
+            (recv_data, self._addr_target) = self.recvfrom(1024)
+            logging.debug("UDP received data: {}".format(repr(recv_data)))
+            recv_string = self._recv_string_rest + recv_data.decode("utf8")
+            logging.debug("Buffer: {}".format(repr(recv_string)))
+            if "\n" in recv_string:
+                recv_string_list = recv_string.splitlines(True)
+                last_string = recv_string_list.pop()
+                if "\n" in last_string:
+                    self._recv_string_rest = ""
+                    recv_string_list.append(last_string)
+                else:
+                    self._recv_string_rest = last_string
+                return recv_string_list
+            else:
+                self._recv_string_rest = recv_string
 
     def data_handler(self, recv_queue):
         self._is_running.set()
         while self._is_running.is_set():
-            try:
-                self.open()
-            except Exception as e:
-                logging.info("Could not open UDP interface {}. Exception: {}. "
-                    "Try again...".format(str(self._addr), str(e)))
-                time.sleep(1)
-                continue
             while self._is_running.is_set():
                 try:
-                    (data_recv, self._addr_target) = self.recvfrom(1024)
+                    recv_string_list = self._readlines()
                 except:
                     break
-                data_recv = data_recv.decode("utf8").strip()
-                data_recv_list = data_recv.split("\n")
-                for data_recv in data_recv_list:
-                    if data_recv:
-                        data = (self, data_recv)
-                        recv_queue.put(data)
-                        logging.debug("UDP received data from {}: {}".format(
-                            repr(self._addr_target), repr(data_recv)))
+                for recv_string in recv_string_list:
+                    # if recv_string:
+                    data = (self, recv_string)
+                    recv_queue.put(data)
+                    logging.debug("UDP received data from {}: {}".format(
+                        repr(self._addr_target), repr(recv_string)))
         logging.info("UDP handler stopped. {}".format(self._addr))
 
 if HAS_SERIAL:
     class SCPIInterfaceSerial(serial.Serial, SCPIInterfaceBase):
         def __init__(self, *args, **kwargs):
             SCPIInterfaceBase.__init__(self)
+
+        def __str__(self):
+            return "Serial"
 
         def data_handler(self, recv_queue):
             while True:
