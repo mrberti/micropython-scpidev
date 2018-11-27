@@ -212,7 +212,7 @@ class SCPIDevice():
         logging.debug("'run()' has finished.")
 
 
-    def stop(self, timeout=0):
+    def stop(self, timeout=None):
         self._is_running.clear()
         for interface in self._interface_list:
             interface.stop()
