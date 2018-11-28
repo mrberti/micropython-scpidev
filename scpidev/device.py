@@ -120,6 +120,7 @@ class SCPIDevice():
         match_found = False
         result = None
         reason = "No reason."
+        command_string = utils.sanitize(command_string)
         for cmd in self.get_command_list():
             if cmd.match(command_string):
                 match_found = True
@@ -211,12 +212,13 @@ class SCPIDevice():
         self.stop_watchdog()
         logging.debug("'run()' has finished.")
 
-
     def stop(self, timeout=None):
         self._is_running.clear()
         for interface in self._interface_list:
             interface.stop()
         for thread in self._thread_list:
+            logging.debug("Waiting for Thread '{}' to finish."
+                .format(thread.name))
             thread.join(timeout=timeout)
         logging.debug("All data handlers have finished.")
 

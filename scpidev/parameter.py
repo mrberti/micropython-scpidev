@@ -33,6 +33,11 @@ class SCPIParameter():
         return self._parameter_string
 
     def _init_from_parameter_string(self, parameter_string):
+        """The parameter parser is the heart of the package. 
+
+        Todo:
+        - Notation for default parameters
+        """
         parameter_string = utils.sanitize(parameter_string, True)
         # Check, if the parameter is optional. Optional parameters contain an 
         # opening square bracket.
@@ -108,3 +113,34 @@ class SCPIParameterList(list):
             ret = ret + str(value) + " "
         ret = ret + "]"
         return ret
+
+    def __contains__(self, test_parameter):
+        """Check if the parameterlist contains ``test_parameter``. 
+        
+        Usage: ``test_parameter in parameter_list``. ``test_parameter`` must 
+        be a sanatized string.
+        
+        Todo: 
+        - The current procedure will accept test_parameters like ",MIN". 
+        Meaning that the prvious optional parameter is left empty. Need 
+        to check if this is acceptable or not. I think yes, because the user 
+        function must accept default parameters for optional parameters in any 
+        case. But it would be nice, if a default parameter feature would be 
+        implemented in this package.
+        """
+        test_para_list = test_parameter.split(",")
+        if len(test_para_list) > len(self):
+            # There were more parameters given than contained in this list.
+            return False
+
+        # To make this work, a new list must be created.
+        parameter_list_temp = self[:]
+        for test in test_para_list:
+            for parameter in parameter_list_temp:
+                if test == "" and parameter.is_optional():
+                    break
+                if parameter.match(test):
+                    parameter_list_temp.pop(0)
+                    break
+                return False
+        return True

@@ -9,12 +9,12 @@ logging.basicConfig(format=FORMAT, level=logging.DEBUG)
 
 # Define our action functions
 def test_function(*args, **kwargs):
-    print("## Execute. ##")
+    print("## Execute: {} ##".format(repr(kwargs["command_string"])))
     i = 0
     for arg in args:
-        time.sleep(1)
+        # time.sleep(1)
+        print("Got arg {}: {}".format(str(i), repr(arg)))
         i += 1
-        print("Got arg: {}".format(str(arg)))
     return i
 
 def test_function2(test):
@@ -61,12 +61,14 @@ dev.create_interface("tcp")
 # dev.create_interface("udp")
 # dev.create_interface("serial", port="COM7", baudrate="500000", dsrdtr=1)
 
-t = threading.Thread(target=dev.run)
-t.start()
-time.sleep(2)
-dev.stop()
-t.join()
+# # Start the server thread but kill it after some time
+# t = threading.Thread(target=dev.run)
+# t.start()
+# time.sleep(2)
+# dev.stop()
+# t.join()
 
+# Start the server thread and wait until program is terminated (ctrl+c).
 t = threading.Thread(target=dev.run)
 t.start()
 try:

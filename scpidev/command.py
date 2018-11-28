@@ -50,22 +50,6 @@ class SCPICommand():
             parameter_string_list.append(parameter.get_parameter_string())
         return parameter_string_list
 
-    # def add_parameter(self, 
-    #         name, 
-    #         optional="False", 
-    #         value_list=list(), 
-    #         default=None, 
-    #         parameter_string=""):
-    #     """Add a parameter at the end of the parameter list."""
-    #     self._parameter_list.append(
-    #         SCPIParameter(
-    #             name=name, 
-    #             optional=optional, 
-    #             value_list=value_list, 
-    #             default=default, 
-    #             parameter_string=parameter_string,
-    #     ))
-
     def execute_if_match(self, command_string):
         """Execute the attached action if the ``command_string`` matches the 
         commands syntax. The first parameter will alwas be the full 
@@ -82,13 +66,13 @@ class SCPICommand():
         follow."""
         parameter_string = utils.create_command_tuple(command_string)[1]
         args = list()
-        # The first argument will be the full command_string.
-        args.append(command_string)
         if parameter_string:
             args = args + parameter_string.split(",")
         # Todo: create a named list, which corresponds to parameter names 
         # defined in the command creation string.
+        # The ``command_string`` can be read from kwargs
         kwargs = dict()
+        kwargs["command_string"] = command_string
         return self._action(*args, **kwargs)
 
     def is_query(self):
@@ -145,21 +129,31 @@ class SCPICommand():
 
     def match_parameters(self, test_string):
         test_string = utils.sanitize(test_string, remove_all_spaces=True)
-        test_parameter_string_list = test_string.split(",")
-        pos = 0
-        n_test_parameter = len(test_parameter_string_list)
-        for parameter in self.get_parameter_list():
-            if pos >= n_test_parameter:
-                if not parameter.is_optional():
-                    return False
-                continue
-            test = test_parameter_string_list[pos]
-            if not parameter.match(test):
-                return False
-            pos += 1
-        return True
+        return test_string in self.get_parameter_list()
 
 
 class SCPICommandList(list):
     def __init__(self):
         list.__init__(self)
+
+    def __str__(self):
+        ret = "[\n"
+        for command in self:
+            ret = ret + "'"+ str(command) + "'\n"
+        ret = ret + "]"
+        return ret
+
+    def __contains__(self, val):
+        return self.get_command(val, match_parameters=True) is not None
+
+    def get_command(self, command_string, match_parameters=True):
+        keyword_string, parameter_string = utils.create_command_tuple(
+            command_string)
+        for cmd in self:
+            if match_parameters:
+                if cmd.match(command_string):
+                    return cmd
+            else:
+                if cmd.match_keyword(keyword_string):
+                    return cmd
+        return None
