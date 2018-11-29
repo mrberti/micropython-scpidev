@@ -20,6 +20,13 @@ def test_function(*args, **kwargs):
 def test_function2(test):
     print("## Execute. ##" + str(test))
 
+def idn(*args, **kwargs):
+    return "SCPIDevice,0.0.1a"
+
+def rst(*args, **kwargs):
+    print("Clear device history")
+    dev.clear_alarm(clear_history=True)
+
 # Define some test command strings
 command_strings = [
     # "*RST",
@@ -49,6 +56,9 @@ dev = scpidev.SCPIDevice(
     name="My SCPI Device",
 )
 
+dev.add_command("*IDN?", idn)
+dev.add_command("*RST", rst)
+
 # Create commands
 for cmd in command_strings:
     dev.add_command(
@@ -58,10 +68,10 @@ for cmd in command_strings:
 
 # Crate the communication interfaces
 dev.create_interface("tcp")
-# dev.create_interface("udp")
-# dev.create_interface("serial", port="COM7", baudrate="500000", dsrdtr=1)
+dev.create_interface("udp")
+dev.create_interface("serial", port="COM7", baudrate="500000", dsrdtr=1)
 
-# # Start the server thread but kill it after some time
+# Start the server thread but kill it after some time
 # t = threading.Thread(target=dev.run)
 # t.start()
 # time.sleep(2)
