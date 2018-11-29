@@ -16,19 +16,23 @@ cmd_strings = [
     "MEASure[:VOLTage][:DC]? [{<range>|AUTOmatic|MIN|MAX|DEF}[,{<resolution>|MIN|MAX|DEF}]]",
     "MEASure:CURRent[:DC]? [{<range>|AUTOmatic|MIN|MAX|DEF}[,{<resolution>|MIN|MAX|DEF}]]",
     "MEASure:CURRent:AC? [{<range>|AUTOmatic|MIN|MAX|DEF}[,{<resolution>|MIN|MAX|DEF}]]",
+    "*IDN?",
+    "*RST",
 ]
 
 # {Command: Expected results tuple}. Each entry corresponds to one cmd_string.
 test_commands_dict = {
-    "MEAS?": (1, None, None),
-    " MEasure?": (1, None, None),
-    "MEAS:VOLT?": (1, None, None),
-    "measure": (None, None, None),
-    "measr?": (None, None, None),
-    "meas:curre:AC? AUTOm": (None, None, 2),
-    "meas:curre? 10 A, MAX": (None, 3, None),
-    "MEASure:CURRent:DC? ,-1e-37 A": (None, 3, None),
-    "meas:curre:DC? 10 A, MAXi": (None, None, None),
+    "MEAS?": (1, None, None, None, None),
+    " MEasure?": (1, None, None, None, None),
+    "MEAS:VOLT?": (1, None, None, None, None),
+    "measure": (None, None, None, None, None),
+    "measr?": (None, None, None, None, None),
+    "meas:curre:AC? AUTOm": (None, None, 2, None, None),
+    "meas:curre? 10 A, MAX": (None, 3, None, None, None),
+    "MEASure:CURRent:DC? ,-1e-37 A": (None, 3, None, None, None),
+    "meas:curre:DC? 10 A, MAXi": (None, None, None, None, None),
+    "*IDN?": (None, None, None, 1, None),
+    "*RST": (None, None, None, None, 1),
 }
 
 class TestSCPICommand(unittest.TestCase):
@@ -69,3 +73,8 @@ class TestSCPICommand(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+    # s = "MEAS"
+    # cmd = SCPICommand(s, test_function)
+    # cl = SCPICommandList([cmd])
+    # print(cl)
+    # print(s in cl)

@@ -24,7 +24,7 @@ class SCPIKeywordList(list):
         str_req = str_opt = ""
 
         for c in keyword_string:
-            if c.isupper():
+            if c.isupper() or c == "*":
                 str_req = str_req + c
                 continue
             if c.islower():
@@ -33,11 +33,17 @@ class SCPIKeywordList(list):
             if str_req:
                 keyword = SCPIKeyword((str_req, str_opt), is_optional)
                 self.append(keyword)
-            str_req = str_opt = ""
-
             if c == "[":
                 is_optional = True
             if c == "]":
                 is_optional = False
             # if c == ":":
             #     pass
+            str_req = str_opt = ""
+
+        # If we reached here and the str_req is not an empty string, all 
+        # characters were processed without finding any special character.
+        # In other words: The keyword string only contains one word.
+        if str_req:
+            keyword = SCPIKeyword((str_req, str_opt), is_optional)
+            self.append(keyword)
