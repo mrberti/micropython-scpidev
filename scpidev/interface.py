@@ -43,11 +43,11 @@ class SCPIInterfaceBase(object):
         pass
 
 
-class SCPIInterfaceTCP(socket.socket, SCPIInterfaceBase):
+class SCPIInterfaceTCP(SCPIInterfaceBase):
     def __init__(self, *args, **kwargs):
         SCPIInterfaceBase.__init__(self)
-        super(SCPIInterfaceTCP, self).__init__(
-            socket.AF_INET, socket.SOCK_STREAM)
+
+        # Check arguements.
         if "ip" in kwargs:
             local_host = kwargs["ip"]
         else:
@@ -56,11 +56,16 @@ class SCPIInterfaceTCP(socket.socket, SCPIInterfaceBase):
             port = kwargs["port"]
         else:
             port = 5025
+
+        # Initialize member variables.
+        self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._addr = (local_host, port)
         self._recv_string_rest = ""
+
+        # Bind to TCP socket.
         try:
-            self.bind(self._addr)
-            self.listen(1)
+            self._socket.bind(self._addr)
+            self._socket.listen(1)
         except Exception as e:
             logging.warning("Could not open TCP interface {}. Exception: {}. "
                 .format(str(self._addr), str(e)))
@@ -72,13 +77,17 @@ class SCPIInterfaceTCP(socket.socket, SCPIInterfaceBase):
         return "TCP {}".format(self._addr)
 
     def open(self):
-        self._socket_remote, self._remote_addr = self.accept()
+        self._socket_remote, self._remote_addr = self._socket.accept()
         logging.info("TCP socket connection established: {}"
             .format(self._remote_addr))
 
     def close(self):
         self._close_remote()
-        super(SCPIInterfaceTCP, self).close()
+        try:
+            self._socket.shutdown(socket.SHUT_RDWR)
+        except:
+            pass
+        self._socket.close()
 
     def _close_remote(self):
         try:
@@ -102,7 +111,7 @@ class SCPIInterfaceTCP(socket.socket, SCPIInterfaceBase):
         better methods...
         """
         while True:
-            recv_data = self.read_data()
+            recv_data = self._socket.read_data()
             if not recv_data:
                 # Remote host closed the connection when an empty string is 
                 # received. In that case, the rest string buffer is cleared.
@@ -131,7 +140,7 @@ class SCPIInterfaceTCP(socket.socket, SCPIInterfaceBase):
             except Exception as e:
                 logging.warning(
                     "Could not open TCP interface {}. Exception: {}. Try "
-                    "again...".format(str(self), str(e)))
+                    "again...".format(self, e))
                 time.sleep(1)
                 continue
             try:
@@ -147,15 +156,15 @@ class SCPIInterfaceTCP(socket.socket, SCPIInterfaceBase):
             except Exception as e:
                 logging.warning(
                     "Could not Receive data on interface {}. Exception: {}"
-                    .format(self, str(e)))
+                    .format(self, e))
         logging.info("TCP handler stopped. {}".format(self._addr))
 
 
-class SCPIInterfaceUDP(socket.socket, SCPIInterfaceBase):
+class SCPIInterfaceUDP(SCPIInterfaceBase):
     def __init__(self, *args, **kwargs):
         SCPIInterfaceBase.__init__(self)
-        super(SCPIInterfaceUDP, self).__init__(
-            socket.AF_INET, socket.SOCK_DGRAM)
+
+        # Check input variables.
         if "ip" in kwargs:
             local_host = kwargs["ip"]
         else:
@@ -164,11 +173,16 @@ class SCPIInterfaceUDP(socket.socket, SCPIInterfaceBase):
             port = kwargs["port"]
         else:
             port = 5025
+        
+        # Initialize member variables.
+        self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._recv_string_rest = ""
         self._addr = (local_host, port)
         self._addr_target = None,
+
+        # Bind server socket.
         try:
-            self.bind(self._addr)
+            self._socket.bind(self._addr)
         except Exception as e:
             logging.warning("Could not open UDP interface {}. Exception: {}. "
                 .format(str(self._addr), str(e)))
@@ -184,7 +198,11 @@ class SCPIInterfaceUDP(socket.socket, SCPIInterfaceBase):
         if type(data) == type(u""):
             data = data.encode("utf8")
         if self._addr_target is not None:
-            self.sendto(data, self._addr_target)
+            self._socket.sendto(data, self._addr_target)
+
+    def close(self):
+        self._socket.shutdown(socket.SHUT_RDWR)
+        self._socket.close()
 
     def _readlines(self):
         """Returns a list of lines with line end characters. This function is 
@@ -195,7 +213,7 @@ class SCPIInterfaceUDP(socket.socket, SCPIInterfaceBase):
         better methods...
         """
         while True:
-            (recv_data, self._addr_target) = self.recvfrom(1024)
+            (recv_data, self._addr_target) = self._socket.recvfrom(1024)
             logging.debug("UDP received data: {}".format(repr(recv_data)))
             recv_string = self._recv_string_rest + recv_data.decode("utf8")
             logging.debug("Buffer: {}".format(repr(recv_string)))
@@ -227,26 +245,27 @@ class SCPIInterfaceUDP(socket.socket, SCPIInterfaceBase):
                         repr(self._addr_target), repr(recv_string)))
         logging.info("UDP handler stopped. {}".format(self._addr))
 
-if HAS_SERIAL:
-    class SCPIInterfaceSerial(serial.Serial, SCPIInterfaceBase):
-        def __init__(self, *args, **kwargs):
-            SCPIInterfaceBase.__init__(self)
+class SCPIInterfaceSerial(SCPIInterfaceBase):
+    def __init__(self, *args, **kwargs):
+        SCPIInterfaceBase.__init__(self)
 
-        def __str__(self):
-            return "Serial"
-
-        def data_handler(self, recv_queue):
-            while True:
-                time.sleep(1)
-else:
-    class SCPIInterfaceSerial(SCPIInterfaceBase):
-        def __init__(self, *args, **kwargs):
-            SCPIInterfaceBase.__init__(self)
-            logging.error("An serial interface was instantiated, but the "
-                "package pyserial is not installed. Attemps in establishing "
+        if not HAS_SERIAL:
+            logging.error("A serial interface was instantiated, but the "
+                "package pyserial is not installed. Attemps in establishing a "
                 "serial communication will result in wild Exceptions.")
+            return
+        pass
 
-        def data_handler(self, recv_queue):
-            self._is_running.set()
-            while self._is_running.is_set():
-                time.sleep(1)
+    def __str__(self):
+        return "Serial"
+
+    def close(self):
+        raise NotImplementedError
+
+    def write(self, data):
+        raise NotImplementedError
+
+    def data_handler(self, recv_queue):
+        self._is_running.set()
+        while self._is_running.is_set():
+            time.sleep(1)
