@@ -95,7 +95,6 @@ class SCPIDevice():
         # The interfaces will only be defined here. The instantiation will 
         # happen later when ``run()`` is called. This insures that after 
         # multiple ``run()`` calls new interfaces are instantiated.
-        self._interface_type_list = list()
         interface_type = (type, args, kwargs)
         self._interface_type_list.append(interface_type)
 
@@ -169,8 +168,14 @@ class SCPIDevice():
             type = interface_type[0]
             args = interface_type[1]
             kwargs = interface_type[2]
-            interface = self._instantiate_interface(type, args, kwargs)
-            self._interface_list.append(interface)
+            try:
+                interface = self._instantiate_interface(type, args, kwargs)
+                self._interface_list.append(interface)
+            except Exception as e:
+                logging.error("Could not instantiate interface '{}'. "
+                    "Exception: {}".format(interface_type, e))
+        logging.debug("Instantiated {} interfaces.".format(
+            len(self._interface_list)))
 
         # Create threads for each interface's data handler.
         for interface in self._interface_list:
@@ -246,4 +251,4 @@ class SCPIDevice():
                     .format(time.time(), len(self._alarm_trace)))
                 iterations = 0
             time.sleep(1)
-        logging.info("Watchdog stopped.")
+        logging.info("Watchdog has stopped.")
