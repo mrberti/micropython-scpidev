@@ -17,8 +17,7 @@ class SCPIDevice():
     be set. It will be called when ``SCPIDevice.execute(cmd_string)`` is 
     and a matching command could be found."""
 
-    def __init__(self, name=""):
-        """Todo: Add more parameters, e.g. *IDN strings"""
+    def __init__(self, *args, **kwargs):
         self._command_list = SCPICommandList()
         self._command_history = list()
         self._alarm_state = False
@@ -49,7 +48,7 @@ class SCPIDevice():
     def list_commands(self):
         """Return a list of command strings which were added to the device."""
         commands = list()
-        for cmd in self.get_command_list():
+        for cmd in self._command_list:
             commands.append(str(cmd))
         return commands
 
@@ -116,44 +115,49 @@ class SCPIDevice():
         - Implement parallelism in execution tasks
         """
         executed = False
-        match_found = False
         result = None
+        result_string = None
         reason = "No reason."
         command_string = utils.sanitize(command_string)
-        for cmd in self.get_command_list():
-            if cmd.match(command_string):
-                match_found = True
+        cmd = self._command_list.get_command(command_string, 
+            match_parameters=False)
+        if cmd is not None:
+            if self._command_list.get_command(command_string, 
+                    match_parameters=True) is not None:
                 fn_name = cmd.get_action_name()
                 try:
                     result = cmd.execute(command_string)
+                    if result is not None:
+                        result_string = str(result)
+                        if not result_string.endswith("\n"):
+                            result_string = result_string + "\n"
+                    cmd_hist_string = "{cs!r} => {fn} => {res!r}".format(
+                        cs=command_string, fn=fn_name, res=result_string)
+                    self._command_history.append(cmd_hist_string)
+                    executed = True
                 except Exception as e:
                     reason = (
-                        "Exception during execution of function {}: {}."
-                        .format(repr(fn_name), str(e)))
-                    break
-                cmd_hist_string = "{cs} => {fn} => {res}".format(
-                    cs=repr(command_string), fn=fn_name, 
-                    res=repr(result))
-                self._command_history.append(cmd_hist_string)
-                executed = True
-                break
-
+                        "Exception during execution of function {!r}: {}."
+                        .format(fn_name, e))
+            else:
+                reason = "Parameter mismatch."
+        else:
+            reason = "No match found."
         if not executed:
-            if not match_found:
-                reason = "No match found."
-            self.set_alarm("Could not execute command {c}. {r}"
-                .format(c=repr(command_string), r=reason))
-        return result
+            self.set_alarm("Could not execute command {c!r}. {r}"
+                .format(c=command_string, r=reason))
+
+        return result_string
 
     def run(self):
         """Start listening on the previously by ``create_interface()`` defined 
         interfaces and execute commands when a message is received. This 
         function will run until ``stop()`` is called.
 
-        Todo:
+        TODO:
         - Implement parallel execution tasks
         """
-        self._recv_queue = Queue() # Todo: Maxsize
+        self._recv_queue = Queue() # TODO: Maxsize
         self._thread_list = list()
         self._interface_list = list()
 
@@ -183,7 +187,6 @@ class SCPIDevice():
             t = threading.Thread(
                 target=interface.data_handler, name=str(interface), args=args)
             self._thread_list.append(t)
-            # t.daemon = True
             t.start()
 
         # As long as we did not receive a stop command, we try to get the data 
@@ -196,9 +199,9 @@ class SCPIDevice():
             while self._is_running.is_set():
                 try:
                     data_recv = self._recv_queue.get(timeout=1)
+                    break
                 except Empty:
                     continue
-                break
 
             # Execute the received command string and return the result (if 
             # any).
@@ -210,7 +213,7 @@ class SCPIDevice():
                     try:
                         interface.write(str(result))
                     except Exception as e:
-                        logging.info("Could not send data to {}.  Exception: "
+                        logging.info("Could not send data to {}. Exception: "
                         "{}.".format(str(interface), str(e)))
 
         # Do not forget to clean-up.
@@ -240,15 +243,28 @@ class SCPIDevice():
 
     def _watchdog_handler(self):
         """The watchdog should periodically check for deadlocks or other 
-        inconsistencies. Todo: implement."""
-        # Todo: implement an intelligent watchdog
+        inconsistencies. 
+        
+        TODO: Implement an intelligent watchdog.
+        Ideas:
+        - restart data_handler thread
+        """
         iterations = 0
         while self._watchdog_running.is_set():
-            if iterations < 10:
+            if iterations < 9:
                 iterations += 1
             else:
                 logging.debug("{}: Watchdog alive. Alarms: {}."
                     .format(time.time(), len(self._alarm_trace)))
+                alive_threads = 0
+                for t in self._thread_list:
+                    if t.is_alive():
+                        alive_threads += 1
+                    else:
+                        logging.warning("Watchdog: Thread {!r} is not alive"
+                            .format(t))
+                if alive_threads == len(self._thread_list):
+                    logging.debug("Watchdog: All threads alive.")
                 iterations = 0
             time.sleep(1)
         logging.info("Watchdog has stopped.")
