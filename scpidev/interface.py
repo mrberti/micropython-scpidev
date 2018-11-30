@@ -64,11 +64,13 @@ class SCPIInterfaceBase(object):
 
     @abc.abstractmethod
     def write(self, data):
-        pass
+        bytes_written = 0
+        return bytes_written
 
     @abc.abstractmethod
     def data_handler(self, recv_queue):
-        pass
+        while self._is_running.is_set():
+            time.sleep(1)
 
 
 class SCPIInterfaceTCP(SCPIInterfaceBase):
@@ -179,6 +181,9 @@ class SCPIInterfaceTCP(SCPIInterfaceBase):
 
 
 class SCPIInterfaceUDP(SCPIInterfaceBase):
+    SELECT_TIMEOUT = 1
+    BUFFER_SIZE = 1024
+
     def __init__(self, *args, **kwargs):
         SCPIInterfaceBase.__init__(self)
 
@@ -193,12 +198,12 @@ class SCPIInterfaceUDP(SCPIInterfaceBase):
             port = 5025
         
         # Initialize member variables.
-        self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self._recv_string_rest = ""
         self._addr = (local_host, port)
         self._addr_target = None,
 
         # Bind server socket.
+        self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self._socket.setblocking(0)
         self._socket.bind(self._addr)
         logging.info("UDP socket bound to {}.".format(self._addr))
 
@@ -208,63 +213,31 @@ class SCPIInterfaceUDP(SCPIInterfaceBase):
     def write(self, data):
         """Data will be sent to the host which most recently sent data to 
         this interface."""
-        if type(data) == type(u""):
-            data = data.encode("utf8")
+        bytes_written = 0
         if self._addr_target is not None:
-            self._socket.sendto(data, self._addr_target)
-
-    def _close(self):
-        self._socket.close()
-
-    def _read(self, buffer_size=1024):
-        timeout = self._socket.gettimeout()
-        self._socket.settimeout(1)
-        while self._is_running.is_set():
-            try:
-                return self._socket.recvfrom(buffer_size)
-            except socket.timeout:
-                continue
-        return (None, None)
-
-    def _readlines(self):
-        """Returns a list of lines with line end characters. This function is 
-        necessary, becase when using socket.makefile, the readline is blocking 
-        the thread.
-        
-        TODO: This function is quite a plague to implement. Need to find out 
-        better methods...
-        """
-        recv_string_list = list()
-        while self._is_running.is_set():
-            recv_data, self._addr_target = self._read()
-            if recv_data:
-                logging.debug("UDP received data: {!r}".format(recv_data))
-                recv_string = self._recv_string_rest + recv_data.decode("utf8")
-                logging.debug("Buffer: {!r}".format(recv_string))
-                if "\n" in recv_string:
-                    recv_string_list = recv_string.splitlines(True)
-                    last_string = recv_string_list.pop()
-                    if "\n" in last_string:
-                        self._recv_string_rest = ""
-                        recv_string_list.append(last_string)
-                    else:
-                        self._recv_string_rest = last_string
-                    return recv_string_list
-                else:
-                    self._recv_string_rest = recv_string
-        return recv_string_list
+            data = data.encode("utf8")
+            bytes_written = self._socket.sendto(data, self._addr_target)
+        return bytes_written
 
     def data_handler(self, recv_queue):
+        inputs = [self._socket]
+
         self._is_running.set()
-        while self._is_running.is_set():
-            while self._is_running.is_set():
-                recv_string_list = self._readlines()
-                for recv_string in recv_string_list:
-                    data = (self, recv_string)
-                    recv_queue.put(data)
-                    logging.debug("UDP received data from {!r}: {!r}".format(
-                        self._addr_target, recv_string))
-        self._close()
+        while self._is_running.is_set() and inputs:
+            readables, _, _ = select.select(
+                inputs, [], inputs, SCPIInterfaceUDP.SELECT_TIMEOUT)
+
+            for readable in readables:
+                recv_data, self._addr_target = readable.recvfrom(
+                    SCPIInterfaceUDP.BUFFER_SIZE)
+                logging.debug("UDP received data from {}: {!r}".format(
+                    self._addr_target, recv_data))
+                recv_string_list = self._parselines(recv_data)
+                if recv_string_list is not None:
+                    for recv_string in recv_string_list:
+                        data = (self, recv_string)
+                        recv_queue.put(data)
+        self._socket.close()
         logging.info("UDP handler has stopped. {}".format(self._addr))
 
 class SCPIInterfaceSerial(SCPIInterfaceBase):
