@@ -18,6 +18,13 @@ class SCPIDevice():
     and a matching command could be found."""
 
     def __init__(self, *args, **kwargs):
+        """Instantiate the SCPIDevice.
+        
+        You can create commands from a dictonary by using 
+        ``SCPIDevice(cmd_dict=cmd_dict)``.
+        The dictionary's keys are the SCPI strings and the values represent 
+        the function callbacks. 
+        """
         self._command_list = SCPICommandList()
         self._command_history = list()
         self._alarm_state = False
@@ -26,6 +33,13 @@ class SCPIDevice():
         self._interface_type_list = list()
         self._is_running = threading.Event()
         self._watchdog_running = threading.Event()
+
+        if "cmd_dict" in kwargs:
+            for cmd_string in kwargs["cmd_dict"]:
+                self.add_command(
+                    cmd_string,
+                    kwargs["cmd_dict"][cmd_string],
+                )
 
     def get_command_list(self):
         """Return a list of command objects."""
