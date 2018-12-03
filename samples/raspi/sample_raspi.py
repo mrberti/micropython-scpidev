@@ -40,12 +40,21 @@ def meas_clock_arm(*args, **kwargs):
 def meas_clock_core(*args, **kwargs):
     return vcgencmd("measure_clock core")
 
+def syst_help(*args, **kwargs):
+    cmd_list = dev.get_command_list()
+    cmd_list.sort()
+    result = "\n"
+    for cmd in cmd_list:
+        result = result + str(cmd) + "\n"
+    return "#{}{}{}".format(len(str(len(result))), len(result), result)
+
 def main():
     # Define the test command dictionary
     cmd_dict = {
         "MEASure:TEMPerature[:CORE]?": meas_temp_core,
         "MEASure:CLOCK:ARM?": meas_clock_arm,
         "MEASure:CLOCK:CORE?": meas_clock_core,
+        "SYSTem:HELP?": syst_help,
     }
 
     # Create the instance of our SCPI device. It should be global, so that the 
@@ -67,7 +76,6 @@ def main():
             time.sleep(1)
     except KeyboardInterrupt:
         dev.stop()
-    exit()
 
 if __name__ == "__main__":
     main()
