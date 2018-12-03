@@ -32,6 +32,7 @@ class SCPIDevice():
         self._interface_list = list()
         self._interface_type_list = list()
         self._is_running = threading.Event()
+        self._thread = None
         self._watchdog_running = threading.Event()
 
         if "cmd_dict" in kwargs:
@@ -163,6 +164,17 @@ class SCPIDevice():
 
         return result_string
 
+    def start(self):
+        """Instantiate a thread and run the ``run()`` routine."""
+        if self._thread is None:
+            self._thread = threading.Thread(
+                name="SCPIDevice",
+                target=self.run)
+            self._thread.start()
+            return True
+        else:
+            return False
+
     def run(self):
         """Start listening on the previously by ``create_interface()`` defined 
         interfaces and execute commands when a message is received. This 
@@ -242,6 +254,8 @@ class SCPIDevice():
             logging.debug("Waiting for Thread '{}' to finish."
                 .format(thread.name))
             thread.join(timeout=timeout)
+        self._thread.join(timeout=timeout)
+        self._thread = None
         logging.debug("All data handlers have finished.")
 
     def start_watchdog(self):

@@ -20,40 +20,30 @@ def rst(*args, **kwargs):
     dev.clear_alarm(clear_history=True)
 
 # https://elinux.org/RPI_vcgencmd_usage
-def meas_temp_core(*args, **kwargs):
+def vcgencmd(cmd):
     result_string = None
+    cmd_string = "/opt/vc/bin/vcgencmd {}".format(cmd)
     try:
-        result_string = os.popen("/opt/vc/bin/vcgencmd measure_temp").readline()
+        result_string = os.popen(cmd_string).readline()
         result_string = result_string.split("=")[1]
-    except Except as e:
-        dev.set_alarm("Could not measure core temperature. Exception {}"
+    except Exception as e:
+        dev.set_alarm("Exception {}"
             .format(e))
     return result_string
+
+def meas_temp_core(*args, **kwargs):
+    return vcgencmd("measure_temp")
 
 def meas_clock_arm(*args, **kwargs):
-    result_string = None
-    try:
-        result_string = os.popen("/opt/vc/bin/vcgencmd measure_clock arm").readline()
-        result_string = result_string.split("=")[1]
-    except Except as e:
-        dev.set_alarm("Could not measure clock. Exception {}"
-            .format(e))
-    return result_string
+    return vcgencmd("measure_clock arm")
 
 def meas_clock_core(*args, **kwargs):
-    result_string = None
-    try:
-        result_string = os.popen("/opt/vc/bin/vcgencmd measure_clock core").readline()
-        result_string = result_string.split("=")[1]
-    except Except as e:
-        dev.set_alarm("Could not measure clock. Exception {}"
-            .format(e))
-    return result_string
+    return vcgencmd("measure_clock core")
 
 def main():
     # Define the test command dictionary
     cmd_dict = {
-        "MEASure:TEMPerature:CORE?": meas_temp_core,
+        "MEASure:TEMPerature[:CORE]?": meas_temp_core,
         "MEASure:CLOCK:ARM?": meas_clock_arm,
         "MEASure:CLOCK:CORE?": meas_clock_core,
     }
@@ -71,8 +61,7 @@ def main():
     dev.create_interface("tcp")
 
     # Start the server thread and wait until program is terminated (ctrl+c).
-    t = threading.Thread(target=dev.run)
-    t.start()
+    dev.start()
     try:
         while True:
             time.sleep(1)

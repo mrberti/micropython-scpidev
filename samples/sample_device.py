@@ -57,9 +57,9 @@ def main():
     dev.create_interface("udp")
     dev.create_interface("serial", port="COM7", baudrate="500000", dsrdtr=1)
 
-    # Start the server thread and wait until program is terminated (ctrl+c).
-    t = threading.Thread(target=dev.run)
-    t.start()
+    # Start the server thread and wait until the user terminates this program 
+    # by ctrl+c.
+    dev.start()
     try:
         while True:
             time.sleep(1)
