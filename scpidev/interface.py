@@ -100,6 +100,7 @@ class SCPIInterfaceTCP(SCPIInterfaceBase):
 
         # Bind to TCP socket. Exceptions must be handled by instance holder.
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self._socket.setblocking(0)
         self._socket.bind(self._addr)
         logging.info("TCP socket bound to {}. Waiting for client connection"
@@ -171,6 +172,16 @@ class SCPIInterfaceTCP(SCPIInterfaceBase):
                 exceptional.close()
         
         # Close all open sockets.
+        try:
+            self._socket_remote.shutdown(socket.SHUT_RDWR)
+        except:
+            pass
+        try:
+            self._socket_remote.close()
+        except:
+            pass
+        self._socket_remote = None
+        self._remote_addr = None
         for s in inputs:
             try:
                 s.shutdown(socket.SHUT_RDWR)
