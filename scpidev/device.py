@@ -173,7 +173,7 @@ class SCPIDevice():
             args = interface_type[1]
             kwargs = interface_type[2]
             try:
-                interface = self._instantiate_interface(type, args, kwargs)
+                interface = self._instantiate_interface(type, *args, **kwargs)
                 self._interface_list.append(interface)
             except Exception as e:
                 logging.error("Could not instantiate interface '{}'. "
