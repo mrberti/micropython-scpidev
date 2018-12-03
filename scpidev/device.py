@@ -175,6 +175,19 @@ class SCPIDevice():
         else:
             return False
 
+    def _get_data_from_queue(self):
+        """Get data from the queue which will be written by the interface
+        data handlers. This "timeout => continue" loop is necessary because 
+        otherwise, Queue.get() would block KeyboardInterrupts."""
+        data_recv = None
+        while self._is_running.is_set():
+            try:
+                data_recv = self._recv_queue.get(timeout=1)
+                break
+            except Empty:
+                continue
+        return data_recv
+
     def run(self):
         """Start listening on the previously by ``create_interface()`` defined 
         interfaces and execute commands when a message is received. This 
@@ -219,19 +232,11 @@ class SCPIDevice():
         # from the receive queue and execute a command.
         self._is_running.set()
         while self._is_running.is_set():
-            # Get data from the queue which will be written by the interface
-            # data handlers.This timeout -> continue loop is necessary because 
-            # otherwise, Queue.get() would block KeyboardInterrupts.
-            while self._is_running.is_set():
-                try:
-                    data_recv = self._recv_queue.get(timeout=1)
-                    break
-                except Empty:
-                    continue
+            data_recv = self._get_data_from_queue()
 
             # Execute the received command string and return the result (if 
             # any).
-            if self._is_running.is_set():
+            if data_recv is not None:
                 interface = data_recv[0]
                 command_string = data_recv[1]
                 result = self.execute(command_string)
@@ -240,7 +245,7 @@ class SCPIDevice():
                         interface.write(str(result))
                     except Exception as e:
                         logging.info("Could not send data to {}. Exception: "
-                        "{}.".format(str(interface), str(e)))
+                            "{}.".format(interface, e))
 
         # Do not forget to clean-up.
         self.stop_watchdog()
