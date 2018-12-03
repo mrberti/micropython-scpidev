@@ -249,7 +249,10 @@ class SCPIInterfaceSerial(SCPIInterfaceBase):
                 "package pyserial is not installed. Attemps in establishing a "
                 "serial communication will result in wild Exceptions.")
             raise NotImplementedError("No pyserial package available")
-        raise NotImplementedError("Not yet implemented")
+        # raise NotImplementedError("Not yet implemented")
+        # self._port = kwargs["port"]
+        # self._baud = kwargs["baudrate"]
+        self._serial = serial.Serial(*args, **kwargs)
 
     def __str__(self):
         return "Serial"
@@ -258,6 +261,12 @@ class SCPIInterfaceSerial(SCPIInterfaceBase):
         raise NotImplementedError
 
     def data_handler(self, recv_queue):
+        if not self._serial.is_open:
+            self._serial.open()
         self._is_running.set()
         while self._is_running.is_set():
+            recv_string = self._serial.readline().decode("utf8")
+            data = (self, recv_string)
+            recv_queue.put(data)
             time.sleep(1)
+        self._serial.close()
