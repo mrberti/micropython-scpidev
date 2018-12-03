@@ -46,7 +46,7 @@ def syst_help(*args, **kwargs):
     result = "\n"
     for cmd in cmd_list:
         result = result + str(cmd) + "\n"
-    return "#{}{}{}".format(len(str(len(result))), len(result), result)
+    return scpidev.utils.create_block_data_string(result)
 
 def main():
     # Define the test command dictionary

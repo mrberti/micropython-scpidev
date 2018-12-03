@@ -87,3 +87,12 @@ def get_local_ip(
             "Exception: {}".format(ip, str(e)))
     sock.close()
     return ip
+
+def create_block_data_string(string):
+    """Create the required format for block data. The result is in the format: 
+    ``#<n><XX><string>`` where ``<XX>`` is the number of bytes following and 
+    ``<n>`` the length of <XX>
+    
+    Sample: #211abcdefghijk
+    """
+    return "#{}{}{}".format(len(str(len(string))), len(string), string)
