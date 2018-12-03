@@ -29,6 +29,11 @@ class SCPICommand():
     def __str__(self):
         return self._scpi_string
 
+    def __lt__(self, other):
+        a = str(self)
+        b = str(other)
+        return a < b
+
     def get_action_name(self):
         return self._action.__name__
 
