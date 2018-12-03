@@ -18,6 +18,10 @@ def main():
             i += 1
         return i
 
+    def malfunction(*args, **kwargs):
+        """A malfunctioning function to test exception handling."""
+        return args[999]
+
     def idn(*args, **kwargs):
         return "SCPIDevice,0.0.1a"
 
@@ -51,6 +55,7 @@ def main():
             scpi_string=cmd,
             action=test_function,
         )
+    dev.add_command("MALfunction", malfunction)
 
     # Crate the communication interfaces
     dev.create_interface("tcp")
@@ -65,7 +70,6 @@ def main():
             time.sleep(1)
     except KeyboardInterrupt:
         dev.stop()
-    exit()
 
 if __name__ == "__main__":
     main()
