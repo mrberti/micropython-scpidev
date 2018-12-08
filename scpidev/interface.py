@@ -145,7 +145,11 @@ class SCPIInterfaceTCP(SCPIInterfaceBase):
                             .format(self._remote_addr))
                 else:
                     # The client has sent data.
-                    recv_data = readable.recv(SCPIInterfaceTCP.BUFFER_SIZE)
+                    try:
+                        recv_data = readable.recv(SCPIInterfaceTCP.BUFFER_SIZE)
+                    except Exception as e:
+                        logging.debug("TCP recv exception: {}".format(e))
+                        recv_data = b""
                     logging.debug("TCP received data: {!r}".format(recv_data))
                     recv_data_list = self._parselines(recv_data)
                     if recv_data_list is None:
