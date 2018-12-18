@@ -12,11 +12,13 @@ logging.basicConfig(format=FORMAT, level=logging.INFO)
 
 
 # Define the action function
-def idn(*args, **kwargs):
+def ieee488_idn(*args, **kwargs):
     return "SCPIDevice,0.0.1a"
 
-def rst(*args, **kwargs):
-    print("Clear device history")
+def ieee488_rst(*args, **kwargs):
+    pass
+
+def ieee488_cls(*args, **kwargs):
     dev.clear_alarm(clear_history=True)
 
 # https://elinux.org/RPI_vcgencmd_usage
@@ -48,6 +50,9 @@ def syst_help(*args, **kwargs):
         result = result + str(cmd) + "\n"
     return scpidev.utils.create_block_data_string(result)
 
+def syst_err(*args, **kwargs):
+    return "'" + str(dev.get_alarm()) + "'"
+
 def main():
     # Define the test command dictionary
     cmd_dict = {
@@ -55,6 +60,7 @@ def main():
         "MEASure:CLOCK:ARM?": meas_clock_arm,
         "MEASure:CLOCK:CORE?": meas_clock_core,
         "SYSTem:HELP?": syst_help,
+        "SYSTem:ERRor[:NEXT]?": syst_err,
     }
 
     # Create the instance of our SCPI device. It should be global, so that the 
@@ -63,8 +69,9 @@ def main():
     dev = scpidev.SCPIDevice(cmd_dict=cmd_dict)
 
     # Create the standard commands
-    dev.add_command("*IDN?", idn)
-    dev.add_command("*RST", rst)
+    dev.add_command("*IDN?", ieee488_idn)
+    dev.add_command("*RST", ieee488_rst)
+    dev.add_command("*CLD", ieee488_cls)
 
     # Crate the communication interfaces
     dev.create_interface("tcp")
