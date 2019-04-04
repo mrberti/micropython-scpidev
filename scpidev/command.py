@@ -1,4 +1,7 @@
-import re
+try:
+    import re
+except ImportError:
+    import ure as re
 
 from . import utils
 from .keyword import SCPIKeyword, SCPIKeywordList
@@ -11,8 +14,10 @@ class SCPICommand():
         self._action = action
         self._description = description
         self._keyword_string, self._parameter_string = utils.create_command_tuple(scpi_string)
-        self._keyword_list = SCPIKeywordList(self._keyword_string)
-        self._parameter_list = SCPIParameterList(self._parameter_string)
+        self._keyword_list = SCPIKeywordList()
+        self._keyword_list.init(self._keyword_string)
+        self._parameter_list = SCPIParameterList()
+        self._parameter_list.init(self._parameter_string)
         self._scpi_string = self._keyword_string + " " + self._parameter_string
         if name:
             self._name = name
@@ -45,7 +50,7 @@ class SCPICommand():
 
     def get_parameter_string(self):
         return self._parameter_string
-    
+
     def get_parameter_list(self):
         return self._parameter_list
 
@@ -56,9 +61,9 @@ class SCPICommand():
         return parameter_string_list
 
     def execute_if_match(self, command_string):
-        """Execute the attached action if the ``command_string`` matches the 
-        commands syntax. The first parameter will alwas be the full 
-        ``command_string``. After that, a list of parsed parameters will 
+        """Execute the attached action if the ``command_string`` matches the
+        commands syntax. The first parameter will alwas be the full
+        ``command_string``. After that, a list of parsed parameters will
         follow."""
         command_string = utils.sanitize(command_string, False)
         if not self.match(command_string):
@@ -66,14 +71,14 @@ class SCPICommand():
         return self.execute(command_string)
 
     def execute(self, command_string):
-        """Execute the attached action. The first parameter will alwas be the 
-        full ``command_string``. After that, a list of parsed parameters will 
+        """Execute the attached action. The first parameter will alwas be the
+        full ``command_string``. After that, a list of parsed parameters will
         follow."""
         parameter_string = utils.create_command_tuple(command_string)[1]
         args = list()
         if parameter_string:
             args = args + parameter_string.split(",")
-        # Todo: create a named list, which corresponds to parameter names 
+        # Todo: create a named list, which corresponds to parameter names
         # defined in the command creation string.
         # The ``command_string`` can be read from kwargs
         kwargs = dict()
@@ -84,7 +89,7 @@ class SCPICommand():
         return self._is_query
 
     def match(self, command_string):
-        """Return ``True`` if ``command_string`` matches the instance's 
+        """Return ``True`` if ``command_string`` matches the instance's
         keyword AND parameters. ``False`` otherwise."""
         keyword_string, parameter_string = utils.create_command_tuple(command_string)
         matches_keyword = self.match_keyword(keyword_string)
@@ -92,7 +97,7 @@ class SCPICommand():
         return matches_keyword and matches_parameter
 
     def match_keyword(self, keyword_string):
-        """Return ``True`` if ``keyword_string`` matches the instances 
+        """Return ``True`` if ``keyword_string`` matches the instances
         keyword. ``False`` otherwise."""
         keyword_string = keyword_string.lower()
         # Check if the command is a query. If True, remove the trailing '?'.
@@ -104,12 +109,12 @@ class SCPICommand():
         elif self.is_query():
             return False
 
-        # Split keywords into a test string list against which each keyword 
+        # Split keywords into a test string list against which each keyword
         # will be tested.
         test_string_list = keyword_string.split(":")
 
-        # Iterate over all keywords. Leave the procedure as soon as a mismatch 
-        # is detected. When the loop finishes ordinarily, the matching was 
+        # Iterate over all keywords. Leave the procedure as soon as a mismatch
+        # is detected. When the loop finishes ordinarily, the matching was
         # succesful.
         keyword_i = 0
         for keyword in self.get_keyword_list():
@@ -138,8 +143,8 @@ class SCPICommand():
 
 
 class SCPICommandList(list):
-    def __init__(self, *args, **kwargs):
-        list.__init__(self, *args, **kwargs)
+    # def __init__(self, *args, **kwargs):
+        # list.__init__(self, *args, **kwargs)
 
     def __str__(self):
         ret = "[\n"

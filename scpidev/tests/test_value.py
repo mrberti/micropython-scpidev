@@ -5,11 +5,11 @@ test_vectors = [
     {
         "value_string": "{<resolution>|MINimum|MAX|DEF}",
         "expected_values_list": [
-            "<resolution>", ("MIN", "imum", ""), ("MAX", "", ""), 
+            "<resolution>", ("MIN", "imum", ""), ("MAX", "", ""),
             ("DEF", "", "")
         ],
         "match_test": [
-            ("MIN", True), ("min", True), ("mini", True), ("minimum", True), 
+            ("MIN", True), ("min", True), ("mini", True), ("minimum", True),
             ("minimumu", False), ("DEf", True), ("+123.37 A", True),
             (" MIN", False),
         ],
@@ -44,7 +44,8 @@ class TestSCPIValue(unittest.TestCase):
             evl = test_vector["expected_values_list"]
 
             # Create value list from test vector
-            vl = SCPIValueList(vs)
+            vl = SCPIValueList()
+            vl.init(vs)
             print("{} => {}".format(repr(vs), str(vl)))
             n = 0
 

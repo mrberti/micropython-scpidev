@@ -17,9 +17,9 @@ class SCPIKeyword():
 
 
 class SCPIKeywordList(list):
-    def __init__(self, keyword_string):
-        list.__init__(self)
-
+    # def __init__(self, keyword_string):
+    #     list().__init__(self)
+    def init(self, keyword_string):
         is_optional = False
         str_req = str_opt = ""
 
@@ -41,7 +41,7 @@ class SCPIKeywordList(list):
             #     pass
             str_req = str_opt = ""
 
-        # If we reached here and the str_req is not an empty string, all 
+        # If we reached here and the str_req is not an empty string, all
         # characters were processed without finding any special character.
         # In other words: The keyword string only contains one word.
         if str_req:

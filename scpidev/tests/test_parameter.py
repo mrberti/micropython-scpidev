@@ -21,11 +21,12 @@ ps = [
 class TestSCPIParameter(unittest.TestCase):
     def setUp(self):
         for p in ps:
-            self.parameter_list = SCPIParameterList(p)
+            self.parameter_list = SCPIParameterList()
+            self.parameter_list.init(p)
 
     def test_parameter_list(self):
         pass
-    
+
     def test_parameter_match(self):
         # print("AUTO" in self.parameter_list)
         print("" in self.parameter_list)
