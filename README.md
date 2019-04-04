@@ -2,9 +2,10 @@
 A python package to turn your device into an SCPI instrument.
 
 ## Concept
-This package intends to make it easy for developers to turn any device that 
-can run python(3) and has some kind of communication interface, e.g. serial or 
-Ethernet, into an SCPI instrument. SCPI commands look like 
+This package intends to make it easy for developers to turn any device
+that can run python(3) and has some kind of communication interface,
+e.g. serial or Ethernet, into an SCPI instrument. SCPI commands look
+like
 ```
 MEASure:VOLTage?
 CONFigure[:VOLTage][:DC] [{<range>|AUTO|MIN|MAX|DEF}]
@@ -14,15 +15,15 @@ CONFigure[:VOLTage][:DC] [{<range>|AUTO|MIN|MAX|DEF}]
 Get the basic stuff running...
 
 ### Mid Term Plan
-Implement some samples for RaspberryPi.
+Make it running on micropython.
 
 ### Long Term Plan
-Implement a web application to be able to serve HTTP requests and show some 
-nice GUI.
+Implement a web application to be able to serve HTTP requests and show
+some nice GUI.
 
 ## Installation
-I intend to publish this package on PyPi. For now you need to download the 
-code and run the following command from the root directory.
+I intend to publish this package on PyPi. For now you need to download
+the code and run the following command from the root directory.
 
 ```python
 python3 -m pip install -e .
@@ -31,6 +32,7 @@ python3 -m pip install -e .
 ## Usage
 ```python
 import scpidev
+# TODO
 ```
 
 ## Further Reads
