@@ -172,7 +172,7 @@ class SCPIInterfaceTCP(SCPIInterfaceBase):
             for exceptional in exceptionals:
                 logging.warning("TCP Handler: Got one exceptional: {}"
                     .format(exceptional))
-                self._inputs.remove(exceptional)
+                inputs.remove(exceptional)
                 exceptional.close()
 
         # Close all open sockets.
