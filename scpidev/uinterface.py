@@ -67,14 +67,13 @@ class SCPIInterfaceTCP(SCPIInterfaceBase):
         if "ip" in kwargs:
             local_host = kwargs["ip"]
         else:
-            local_host = "127.0.0.1"
+            local_host = "0.0.0.0"
         if "port" in kwargs:
             port = kwargs["port"]
         else:
             port = 5025
 
         # Initialize member variables.
-        # self._addr = socket.getaddrinfo(local_host, port)[0][-1]
         self._addr = None
         self._socket_remote = None
         self._remote_addr = None

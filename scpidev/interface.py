@@ -86,7 +86,7 @@ class SCPIInterfaceTCP(SCPIInterfaceBase):
         if "ip" in kwargs:
             local_host = kwargs["ip"]
         else:
-            local_host = utils.get_local_ip(default_ip="")
+            local_host = "0.0.0.0"
         if "port" in kwargs:
             port = kwargs["port"]
         else:
@@ -206,7 +206,7 @@ class SCPIInterfaceUDP(SCPIInterfaceBase):
         if "ip" in kwargs:
             local_host = kwargs["ip"]
         else:
-            local_host = utils.get_local_ip()
+            local_host = "0.0.0.0"
         if "port" in kwargs:
             port = kwargs["port"]
         else:

@@ -3,6 +3,7 @@ try:
     import socket
     import logging
 except ImportError:
+    # ATTENTION: The unix port of micropython does not support ``re.sub()``!
     import ure as re
     import usocket as socket
     from . import logging_mockup as logging
@@ -80,24 +81,6 @@ def create_command_tuple(command_string):
     p = create_parameter_string(command_string)
     return (c,p)
 
-def get_local_ip(
-        remote_host="1.1.1.1", remote_port=80, default_ip=""):
-    """Try to find out the local ip by establishing a test connection to
-    a known remote host. Using "0.0.0.0" or an empty string will lead to
-    listening on all local addresses."""
-    try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sockaddr = socket.getaddrinfo(remote_host, remote_port)[0][-1]
-        sock.connect(sockaddr)
-        # ip = sock.getsockname()[0]
-        ip = default_ip
-    except Exception as e:
-        ip = default_ip
-        logging.warning("Could not get the local IP. Using default: {}. "
-            "Exception: {}".format(ip, e))
-    sock.close()
-    return ip
-
 def create_block_data_string(string):
     """Create the required format for block data. The result is in the format:
     ``#<n><XX><string>`` where ``<XX>`` is the number of bytes following and
@@ -108,7 +91,6 @@ def create_block_data_string(string):
     return "#{}{}{}".format(len(str(len(string))), len(string), string)
 
 def main_test():
-    print("Local IP = {!r}".format(get_local_ip()))
     print(repr(findfirst(r"asd", "aaasasd as asd")))
     print(repr(remove_non_ascii("auo")))
 

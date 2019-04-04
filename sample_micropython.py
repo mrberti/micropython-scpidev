@@ -51,7 +51,6 @@ def main():
 
     # Crate the communication interfaces
     dev.create_interface("tcp")
-    # dev.create_interface("tcp")
 
     # Start the server thread and wait until program is terminated (ctrl+c).
     dev.start()

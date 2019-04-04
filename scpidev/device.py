@@ -199,6 +199,9 @@ class SCPIDevice():
             except Exception as e:
                 logging.error("Could not instantiate interface '{}'. "
                     "Exception: {}".format(interface_type, e))
+        if not self._interface_list:
+            raise Exception("There is no interface which could be "
+                            "instantiated.")
         logging.debug("Instantiated {} interfaces.".format(
             len(self._interface_list)))
         if USE_THREADING:
@@ -302,6 +305,7 @@ class SCPIDevice():
         self._watchdog_thread.join()
 
     def recv(self, *args, **kwargs):
+        data_recv = None
         for interface in self._interface_list:
             data_recv = interface.recv()
 
