@@ -16,7 +16,7 @@ class TestUtils(unittest.TestCase):
 
     def test_create_keyword_string(self):
         pass
-    
+
     def test_create_parameter_string(self):
         pass
 
@@ -25,7 +25,7 @@ class TestUtils(unittest.TestCase):
         ip = utils.get_local_ip("255.255.255.255",default_ip="localhost")
         self.assertEqual(ip, "localhost")
 
-        # This should success and thus the result should differ from the 
+        # This should success and thus the result should differ from the
         # default value.
         ip = utils.get_local_ip(default_ip="localhost")
         self.assertNotEqual(ip, "localhost")

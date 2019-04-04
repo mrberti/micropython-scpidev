@@ -59,7 +59,7 @@ class TestSCPICommand(unittest.TestCase):
                 # except AssertionError as e:
                 #     print("## FAIL ## {}".format(str(e)))
                 #     raise e
-    
+
     def test_in_commandlist(self):
         print("--------------------------------------------------------------")
         print("test_in_commandlist()")

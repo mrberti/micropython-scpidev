@@ -63,7 +63,7 @@ def main():
         "SYSTem:ERRor[:NEXT]?": syst_err,
     }
 
-    # Create the instance of our SCPI device. It should be global, so that the 
+    # Create the instance of our SCPI device. It should be global, so that the
     # action functions will be able to control the internal states, like alarm.
     global dev
     dev = scpidev.SCPIDevice(cmd_dict=cmd_dict)

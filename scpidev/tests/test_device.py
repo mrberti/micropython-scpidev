@@ -30,7 +30,7 @@ command_strings = [
     ":VOLTage[:DC]:NULL[:STATe] {ON|OFF}",
     "CALCulate:FUNCtion {NULL | DB | DBM | AVERage | LIMit}",
     """
-    MEASure[:VOLTage][:DC]? 
+    MEASure[:VOLTage][:DC]?
         [{<range>|AUTO|MIN|MAX|DEF} [, {<resolution>|MIN|MAX|DEF}] ]
     """,
 ]

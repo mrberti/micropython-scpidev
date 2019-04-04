@@ -8,18 +8,44 @@ import threading
 parser = argparse.ArgumentParser(
     description="Send a message via TCP. A second thread will read the data "
     "from the connection.")
-parser.add_argument("ip", metavar="REMOTEHOST", type=str, help="The IP address of the instrument")
-parser.add_argument("port", metavar="PORT", type=int, help="The TCP port.")
-parser.add_argument("msg", metavar="MESSAGE", type=str, help="The message to be sent, e.g. "
+parser.add_argument(
+    "ip",
+    metavar="REMOTEHOST",
+    type=str,
+    help="The IP address of the instrument"
+)
+parser.add_argument(
+    "port",
+    metavar="PORT",
+    type=int,
+    help="The TCP port."
+)
+parser.add_argument(
+    "msg",
+    metavar="MESSAGE",
+    type=str,
+    help="The message to be sent, e.g. "
     "'MEAS?'. Attention: When invoking from Bash, you should use $'MEAS\\n' to "
-    "correctly send the new line character (single quotes matter).")
-parser.add_argument("-N", type=int, help="Repets the sending of the meassage "
-    "N-times. If N=0 the message is sent indefinitely.", default=1)
-parser.add_argument("-d", type=float, help="Delay in seconds between "
-    "messages. Default: 1s", default=1.)
-parser.add_argument("--udp", help="Use UDP connection instead of TCP. When "
-    "the server is bound to the same local IP, receiving is not possible", 
-    action="store_true")
+    "correctly send the new line character (single quotes matter)."
+)
+parser.add_argument(
+    "-N",
+    type=int,
+    help="Repets the sending of the meassage "
+    "N-times. If N=0 the message is sent indefinitely.", default=1
+)
+parser.add_argument(
+    "-d",
+    type=float,
+    help="Delay in seconds between "
+    "messages. Default: 1s", default=1.
+)
+parser.add_argument(
+    "--udp",
+    help="Use UDP connection instead of TCP. When "
+    "the server is bound to the same local IP, receiving is not possible",
+    action="store_true"
+)
 
 # Get options
 args = parser.parse_args()

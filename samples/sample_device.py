@@ -39,7 +39,7 @@ def main():
         ":VOLTage[:DC]:NULL[:STATe] {ON|OFF}",
         "CALCulate:FUNCtion {NULL | DB | DBM | AVERage | LIMit}",
         """
-        MEASure[:VOLTage][:DC]? 
+        MEASure[:VOLTage][:DC]?
             [{<range>|AUTO|MIN|MAX|DEF} [, {<resolution>|MIN|MAX|DEF}] ]
         """,
     ]
@@ -62,7 +62,7 @@ def main():
     dev.create_interface("udp")
     dev.create_interface("serial", port="COM7", baudrate="500000", dsrdtr=1)
 
-    # Start the server thread and wait until the user terminates this program 
+    # Start the server thread and wait until the user terminates this program
     # by ctrl+c.
     dev.start()
     try:

@@ -23,7 +23,7 @@ from . import utils
 
 
 class SCPIInterfaceBase(object):
-    """The abstract base class for interfaces. Inherited classes must 
+    """The abstract base class for interfaces. Inherited classes must
     implement the abstract methods."""
     def __init__(self):
         self._is_running = threading.Event()
@@ -33,23 +33,23 @@ class SCPIInterfaceBase(object):
         self._is_running.clear()
 
     def _parselines(self, recv_data):
-        """Returns a list of lines with line end characters. ``None`` if the 
-        recv_data is an empty string. An empty list is return if no newline 
+        """Returns a list of lines with line end characters. ``None`` if the
+        recv_data is an empty string. An empty list is return if no newline
         character was received.
-        
-        Todo: This function is quite a plague to implement. Need to find out 
+
+        Todo: This function is quite a plague to implement. Need to find out
         better methods...
         """
         if not recv_data:
-            # Remote host closed the connection when an empty string is 
+            # Remote host closed the connection when an empty string is
             # received. In that case, the rest string buffer is cleared.
             self._recv_string_rest = ""
             return None
         recv_string_list = list([""])
         recv_string = self._recv_string_rest + recv_data.decode("utf8")
         if "\n" in recv_string:
-            # TODO: 
-            # - splitlines is also splitting lines for \r and others. 
+            # TODO:
+            # - splitlines is also splitting lines for \r and others.
             # Usuall only \n is should be used as command delimiter.
             recv_string_list = recv_string.splitlines(True)
             last_string = recv_string_list.pop()
@@ -78,7 +78,7 @@ class SCPIInterfaceTCP(SCPIInterfaceBase):
     BUFFER_SIZE = 1024
 
     def __init__(self, *args, **kwargs):
-        """Instantiates a TCP interface and binds to the socket. Exceptions 
+        """Instantiates a TCP interface and binds to the socket. Exceptions
         must be handled by the instance holder."""
         SCPIInterfaceBase.__init__(self)
 
@@ -116,17 +116,17 @@ class SCPIInterfaceTCP(SCPIInterfaceBase):
         return bytes_written
 
     def data_handler(self, recv_queue):
-        """The ``data_handler()`` function will handle the connections to the 
-        clients, receive data and fill the ``recv_queue`` with received 
+        """The ``data_handler()`` function will handle the connections to the
+        clients, receive data and fill the ``recv_queue`` with received
         commands. It will run until ``stop()`` is called.
-        
-        TODO: Currently, I commented the exception handler out. This is 
-        because I want some errors during development to pop up. For 
+
+        TODO: Currently, I commented the exception handler out. This is
+        because I want some errors during development to pop up. For
         production code, the data_handler should be self-sustaining.
         """
         inputs = [self._socket]
         self._socket.listen(1)
-        
+
         self._is_running.set()
         while self._is_running.is_set() and inputs:
             # A timeout must be set to be able to catch the stop() event.
@@ -153,7 +153,7 @@ class SCPIInterfaceTCP(SCPIInterfaceBase):
                     logging.debug("TCP received data: {!r}".format(recv_data))
                     recv_data_list = self._parselines(recv_data)
                     if recv_data_list is None:
-                        # Received empty string => Connection closed by 
+                        # Received empty string => Connection closed by
                         # client.
                         inputs.remove(readable)
                         readable.close()
@@ -162,7 +162,7 @@ class SCPIInterfaceTCP(SCPIInterfaceBase):
                             self._remote_addr = None
                         logging.info("TCP connection closed by client.")
                     else:
-                        # Received ordinary data. Parse lines and put into the 
+                        # Received ordinary data. Parse lines and put into the
                         # receive queue.
                         for recv_string in recv_data_list:
                             if recv_string:
@@ -174,7 +174,7 @@ class SCPIInterfaceTCP(SCPIInterfaceBase):
                     .format(exceptional))
                 self._inputs.remove(exceptional)
                 exceptional.close()
-        
+
         # Close all open sockets.
         try:
             self._socket_remote.shutdown(socket.SHUT_RDWR)
@@ -211,7 +211,7 @@ class SCPIInterfaceUDP(SCPIInterfaceBase):
             port = kwargs["port"]
         else:
             port = 5025
-        
+
         # Initialize member variables.
         self._addr = (local_host, port)
         self._addr_target = None,
@@ -226,7 +226,7 @@ class SCPIInterfaceUDP(SCPIInterfaceBase):
         return "UDP Interface {}".format(self._addr)
 
     def write(self, data):
-        """Data will be sent to the host which most recently sent data to 
+        """Data will be sent to the host which most recently sent data to
         this interface."""
         bytes_written = 0
         if self._addr_target is not None:
