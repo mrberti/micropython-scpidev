@@ -1,4 +1,7 @@
 try:
+    import utime as time
+    import scpidev.logging_mockup as logging
+except ImportError:
     import time
     import logging
     try:
@@ -6,9 +9,6 @@ try:
     except ImportError:
         # Python2 compatibility
         from Queue import Queue, Empty
-except ImportError:
-    import utime
-    import scpidev.logging_mockup as logging
 
 try:
     raise ImportError("Import Error just for testing purposes.")
@@ -23,7 +23,7 @@ from .command import SCPICommand, SCPICommandList
 if False: # USE_THREADING:
     from .interface import SCPIInterfaceTCP, SCPIInterfaceUDP, SCPIInterfaceSerial
 else:
-    from .uinterface import SCPIInterfaceTCP, SCPIInterfaceUDP, SCPIInterfaceSerial
+    from .uinterface import SCPIInterfaceTCP
 
 
 class SCPIDevice():
@@ -167,9 +167,9 @@ class SCPIDevice():
                         result_string = str(result)
                         if not result_string.endswith("\n"):
                             result_string = result_string + "\n"
-                    cmd_hist_string = "{cs!r} => {fn} => {res!r}".format(
-                        cs=command_string, fn=fn_name, res=result_string)
-                    self._command_history.append(cmd_hist_string)
+                    # cmd_hist_string = "{cs!r} => {fn} => {res!r}".format(
+                        # cs=command_string, fn=fn_name, res=result_string)
+                    # self._command_history.append(cmd_hist_string)
                     executed = True
                 except Exception as e:
                     reason = (

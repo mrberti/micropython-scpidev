@@ -23,4 +23,4 @@ SOFTWARE.
 __author__ = "Simon Bertling"
 __version__ = "0.0.1a"
 
-from .device import SCPIDevice
+# from scpidev.udevice import SCPIDevice

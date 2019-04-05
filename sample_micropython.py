@@ -1,39 +1,44 @@
 try:
     import time
-    import os
 except ImportError:
     import utime as time
-    import uos as os
 
-import scpidev
-from scpidev.device import SCPIDevice
+from scpidev.udevice import SCPIDevice
 
+try:
+    from machine import Pin
+    import onewire
+    import ds18x20
+    def init_hardware():
+        global ow, ds, roms
+        ow = onewire.OneWire(Pin(14)) # GPIO14 = D5 on weemos D1
+        ds = ds18x20.DS18X20(ow)
+        roms = ds.scan()
+except:
+    def init_hardware():
+        print("Warning: Using mockup init_hardware()")
 
 # Define the action function
-def ieee488_idn(*args, **kwargs):
+def idn(*args, **kwargs):
     return "micropython-scpidev,0.0.1a"
 
-def ieee488_rst(*args, **kwargs):
+def rst(*args, **kwargs):
     pass
 
-def ieee488_cls(*args, **kwargs):
-    dev.clear_alarm(clear_history=True)
-
-def syst_help(*args, **kwargs):
-    cmd_list = dev.get_command_list()
-    cmd_list.sort()
-    result = "\n"
-    for cmd in cmd_list:
-        result = result + str(cmd) + "\n"
-    return scpidev.utils.create_block_data_string(result)
-
-def syst_err(*args, **kwargs):
-    return "'{}'".format(dev.get_alarm())
-
 def meas_temp(*args, **kwargs):
-    return "20"
+    temp = "-999"
+    try:
+        ds.convert_temp()
+        time.sleep_ms(750)
+        temp = str(ds.read_temp(roms[0]))
+    except:
+        time.sleep(3)
+        print("Warning: Could not convert temp")
+    return temp
 
 def main():
+    init_hardware()
+
     # Define the test command dictionary
     cmd_dict = {
         "MEASure[:TEMPerature]?": meas_temp,
@@ -44,22 +49,19 @@ def main():
     global dev
     dev = SCPIDevice(cmd_dict=cmd_dict)
 
-    # Create the standard commands
-    dev.add_command("*IDN?", ieee488_idn)
-    dev.add_command("*RST", ieee488_rst)
-    dev.add_command("*CLD", ieee488_cls)
+    # Add some standard commands
+    dev.add_command("*IDN?", idn)
+    dev.add_command("*RST", rst)
 
     # Crate the communication interfaces
     dev.create_interface("tcp")
 
     # Start the server thread and wait until program is terminated (ctrl+c).
-    dev.start()
     try:
         while True:
-            dev.recv()
-            time.sleep(1)
+            dev.poll()
+            time.sleep(.1)
     except KeyboardInterrupt:
-        # dev.stop()
         pass
 
 if __name__ == "__main__":

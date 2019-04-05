@@ -40,7 +40,11 @@ class SCPICommand():
         return a < b
 
     def get_action_name(self):
-        return self._action.__name__
+        try:
+            return self._action.__name__
+        except:
+            # TODO: Micropython seems to not support __name__
+            return ""
 
     def get_keyword_string(self):
         return self._keyword_string
