@@ -32,7 +32,7 @@ def meas_temp(*args, **kwargs):
         time.sleep_ms(750)
         temp = str(ds.read_temp(roms[0]))
     except:
-        time.sleep(3)
+        time.sleep(.75)
         print("Warning: Could not convert temp")
     return temp
 
@@ -47,22 +47,29 @@ def main():
     # Create the instance of our SCPI device. It should be global, so that the
     # action functions will be able to control the internal states, like alarm.
     global dev
-    dev = SCPIDevice(cmd_dict=cmd_dict)
+    dev = SCPIDevice(
+        cmd_dict=cmd_dict,
+        interface="tcp",
+        buffer_size=128,
+    )
 
     # Add some standard commands
     dev.add_command("*IDN?", idn)
     dev.add_command("*RST", rst)
 
     # Crate the communication interfaces
-    dev.create_interface("tcp")
+    # dev.create_interface("tcp", buffer_size=1024, timeout=1)
 
     # Start the server thread and wait until program is terminated (ctrl+c).
     try:
         while True:
-            dev.poll()
+            print(repr(dev.poll()))
             time.sleep(.1)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt,Exception) as exc:
+        print("Stopping... {}".format(exc))
         pass
+    finally:
+        dev.close()
 
 if __name__ == "__main__":
     main()

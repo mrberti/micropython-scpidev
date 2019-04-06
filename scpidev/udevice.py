@@ -15,10 +15,15 @@ from .command import SCPICommand, SCPICommandList
 from .uinterface import SCPIInterfaceTCP
 
 
+BUFFER_SIZE = 128
+
+
 class SCPIDevice():
     def __init__(self, *args, **kwargs):
         self._command_list = SCPICommandList()
         self._interface = None
+        if "interface" in kwargs:
+            self.create_interface(kwargs["interface"], *args, **kwargs)            
         if "cmd_dict" in kwargs:
             for cmd_string in kwargs["cmd_dict"]:
                 self.add_command(
@@ -68,7 +73,8 @@ class SCPIDevice():
         return result_string
 
     def poll(self, *args, **kwargs):
-        data_str_recv = self._interface.recv()
+        result_list = list()
+        data_str_recv = self._interface.recv(timeout=3)
         if data_str_recv:
             cmd_str_list_recv = data_str_recv.split()
             if not data_str_recv.endswith("\n"):
@@ -77,8 +83,15 @@ class SCPIDevice():
                 for cmd_str in cmd_str_list_recv:
                     result = self.execute(cmd_str)
                     if result:
+                        result_list.append(result)
                         try:
                             self._interface.write(str(result))
+                            print("{!r}".format(result))
                         except Exception as exc:
                             print("Could not send data. {}.".format(exc))
-                self._interface.close()
+                self._interface.close_remote()
+        return (data_str_recv, result_list)
+
+    def close(self):
+        print("Closing device...")
+        self._interface.close()
