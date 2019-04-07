@@ -32,7 +32,7 @@ def meas_temp(*args, **kwargs):
         time.sleep_ms(750)
         temp = str(ds.read_temp(roms[0]))
     except:
-        time.sleep(.75)
+        time.sleep(2)
         print("Warning: Could not convert temp")
     return temp
 
@@ -64,10 +64,9 @@ def main():
     try:
         while True:
             print(repr(dev.poll()))
-            time.sleep(.1)
-    except (KeyboardInterrupt,Exception) as exc:
+    # except (KeyboardInterrupt,Exception) as exc:
+    except KeyboardInterrupt as exc:
         print("Stopping... {}".format(exc))
-        pass
     finally:
         dev.close()
 
