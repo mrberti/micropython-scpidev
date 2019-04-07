@@ -74,7 +74,7 @@ class SCPIDevice():
 
     def poll(self, *args, **kwargs):
         result_list = list()
-        data_str_recv = self._interface.recv(timeout=3)
+        data_str_recv = self._interface.recv()
         if data_str_recv:
             cmd_str_list_recv = data_str_recv.split()
             if not data_str_recv.endswith("\n"):
@@ -86,10 +86,9 @@ class SCPIDevice():
                         result_list.append(result)
                         try:
                             self._interface.write(str(result))
-                            print("{!r}".format(result))
                         except Exception as exc:
                             print("Could not send data. {}.".format(exc))
-                self._interface.close_remote()
+        self._interface.close_remote()
         return (data_str_recv, result_list)
 
     def close(self):
