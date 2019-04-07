@@ -66,6 +66,7 @@ class SCPIDevice():
                     print(
                         "Exception during execution of function {!r}: {}."
                         .format(command_string, exc))
+                    raise exc
             else:
                 print("Parameter mismatch.")
         else:
