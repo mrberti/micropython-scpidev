@@ -27,13 +27,13 @@ def rst(*args, **kwargs):
 
 def meas_temp(*args, **kwargs):
     temp = "-999"
+    print("Measure temperature...")
     try:
         ds.convert_temp()
         time.sleep_ms(750)
         temp = str(ds.read_temp(roms[0]))
     except:
-        time.sleep(2)
-        print("Warning: Could not convert temp")
+        time.sleep(.2)
     return temp
 
 def main():

@@ -36,6 +36,12 @@ class SCPIInterfaceTCP(object):
             self._timeout = kwargs["timeout"]
             print("Default timeout set to: {}".format(self._timeout))
 
+        addr_local = socket.getaddrinfo(self.host, self.port)[0][-1]
+        self._sock_local = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._sock_local.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self._sock_local.bind(addr_local)
+        self._sock_local.listen(1)
+
     def write(self, data):
         """Write ``data`` to the remote client. ``data`` must be an
         encodable ``String``. Return the amount of bytes written."""
@@ -51,18 +57,12 @@ class SCPIInterfaceTCP(object):
         ``close_remote()`` after receiving the data."""
         if buffer_size is None:
             buffer_size = self._buffer_size
-        self.close()
-        addr_local = socket.getaddrinfo(self.host, self.port)[0][-1]
-        self._sock_local = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._sock_local.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self._sock_local.settimeout(timeout)
-        self._sock_local.bind(addr_local)
-        self._sock_local.listen(1)
-        if "poll" in dir(select):
-            data_raw = self.recv_poll(buffer_size, timeout)
-        else:
-            # Python on windows does not have a ``poll`` implementation
-            data_raw = self.recv_select(buffer_size, timeout)
+        data_raw = None
+        print("Waiting for new connection...")
+        self._sock_remote, addr = self._sock_local.accept()
+        print("New connection: {}".format(addr))
+        data_raw = self._sock_remote.recv(buffer_size)
         print("New data: {!r}".format(data_raw))
         if data_raw:
             return data_raw.decode("utf-8")
@@ -114,18 +114,21 @@ class SCPIInterfaceTCP(object):
         if self._sock_remote:
             print("Closing remote...")
             self._sock_remote.close()
+            self._sock_remote = None
+            gc.collect()
+
+    def close_local(self):
+        """Close the local connection."""
+        if self._sock_local:
+            print("Closing remote...")
+            self._sock_local.close()
+            self._sock_local = None
+            gc.collect()
 
     def close(self):
         """Close the local and remote connections."""
-        if self._sock_remote:
-            self._sock_remote.close()
-        if self._sock_local:
-            self._sock_local.close()
-        # Hint: It seems, that you cannot re-use sockets on Micropython
-        # so it has to be deleted.
-        del self._sock_local, self._sock_remote
-        gc.collect()
-        self._sock_local = self._sock_remote = None
+        self.close_remote()
+        self.close_local()
 
 
 def main_test():
