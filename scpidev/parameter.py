@@ -82,8 +82,8 @@ class SCPIParameter():
 
 
 class SCPIParameterList(list):
-    # def __init__(self, parameter_string):
-    #     list.__init__(self)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     def init(self, parameter_string):
         parameter_string = utils.sanitize(

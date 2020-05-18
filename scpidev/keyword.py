@@ -17,8 +17,9 @@ class SCPIKeyword():
 
 
 class SCPIKeywordList(list):
-    # def __init__(self, keyword_string):
-    #     list().__init__(self)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
     def init(self, keyword_string):
         is_optional = False
         str_req = str_opt = ""

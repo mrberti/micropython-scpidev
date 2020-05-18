@@ -1,17 +1,20 @@
 try:
     import utime as time
-    import scpidev.logging_mockup as logging
 except ImportError:
     import time
+try:
     import logging
-    try:
-        from queue import Queue, Empty
-    except ImportError:
-        # Python2 compatibility
-        from Queue import Queue, Empty
+except ImportError:
+    import scpidev.logging_mockup as logging
+try:
+    from queue import Queue, Empty
+except ImportError:
+    # Python2 compatibility
+    from Queue import Queue, Empty
+
 
 try:
-    raise ImportError("Import Error just for testing purposes.")
+    # raise ImportError("Import Error just for testing purposes.")
     import threading
     USE_THREADING = True
 except ImportError:

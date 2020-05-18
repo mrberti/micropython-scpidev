@@ -1,4 +1,7 @@
-import logging
+try:
+    import logging
+except ImportError:
+    import scpidev.logging_mockup as logging
 import socket
 import time
 import threading

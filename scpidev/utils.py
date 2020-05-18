@@ -1,12 +1,16 @@
 try:
     import re
-    import socket
-    import logging
 except ImportError:
     # ATTENTION: The unix port of micropython does not support ``re.sub()``!
     import ure as re
+try:
     import usocket as socket
-    from . import logging_mockup as logging
+except ImportError:
+    import socket
+try:
+    import logging
+except ImportError:
+    import scpidev.logging_mockup as logging
 
 # NR1: Integer numbers, e.g. 42
 REGEXP_STRING_NR1 = r"[\+-]?[0-9]+"

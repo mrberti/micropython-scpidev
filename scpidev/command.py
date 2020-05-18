@@ -147,8 +147,8 @@ class SCPICommand():
 
 
 class SCPICommandList(list):
-    # def __init__(self, *args, **kwargs):
-        # list.__init__(self, *args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     def __str__(self):
         ret = "[\n"

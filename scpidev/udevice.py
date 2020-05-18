@@ -23,7 +23,7 @@ class SCPIDevice():
         self._command_list = SCPICommandList()
         self._interface = None
         if "interface" in kwargs:
-            self.create_interface(kwargs["interface"], *args, **kwargs)            
+            self.create_interface(kwargs["interface"], *args, **kwargs)
         if "cmd_dict" in kwargs:
             for cmd_string in kwargs["cmd_dict"]:
                 self.add_command(
@@ -77,7 +77,7 @@ class SCPIDevice():
         result_list = list()
         data_str_recv = self._interface.recv()
         if data_str_recv:
-            cmd_str_list_recv = data_str_recv.split()
+            cmd_str_list_recv = data_str_recv.split(";")
             if not data_str_recv.endswith("\n"):
                 del cmd_str_list_recv[-1]
             if cmd_str_list_recv:
