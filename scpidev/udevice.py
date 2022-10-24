@@ -89,7 +89,6 @@ class SCPIDevice():
                             self._interface.write(str(result))
                         except Exception as exc:
                             print("Could not send data. {}.".format(exc))
-        self._interface.close_remote()
         return (data_str_recv, result_list)
 
     def close(self):

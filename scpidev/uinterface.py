@@ -9,9 +9,11 @@ import gc
 try:
     import socket
     import select
+    import errno
 except ImportError:
     import usocket as socket
     import uselect as select
+    import uerrno as errno
 
 
 BUFFER_SIZE_DEFAULT = 128
@@ -67,22 +69,24 @@ class SCPIInterfaceTCP(object):
         return bytes_written
 
     def recv(self, buffer_size=None, timeout=-1):
-        """Receive data as a decoded ``String``. This implementation
-        opens a new connection on every call. The caller should call
-        ``close_remote()`` after receiving the data."""
+        """Receive data as a decoded ``String``."""
         if buffer_size is None:
             buffer_size = self._buffer_size
         if timeout < 0:
             timeout = self._timeout
         data_raw = None
-        print("Waiting for new connection...")
-        self._sock_remote, addr = self._sock_local.accept()
-        self._sock_remote.settimeout(timeout)
-        print("New connection: {}".format(addr))
+        if not self._sock_remote:
+            print("Waiting for new connection...")
+            self._sock_remote, addr = self._sock_local.accept()
+            self._sock_remote.settimeout(timeout)
+            print("New connection: {}".format(addr))
         try:
             data_raw = self._sock_remote.recv(buffer_size)
-        except OSError:
-            print("recv timeout after {} seconds.".format(timeout))
+        except OSError as e:
+            if e.value==errno.ETIMEDOUT:
+                print("recv timeout after {} seconds.".format(timeout))
+            else:
+                self.close_remote()
             return None
         if data_raw:
             print("New data: {!r}".format(data_raw))
