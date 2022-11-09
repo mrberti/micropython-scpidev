@@ -59,7 +59,12 @@ class SCPIParameter():
 
         # Get parameter name. The parameter name is surrounded by <> and
         # outside of {}.
-        name = re.findall(r"<(.+?)>{.+}", self._parameter_string)
+        match = re.match(r"(.+?){.+}", self._parameter_string)
+        if match:
+            name=match.group(1)
+        else:
+            name=None
+            
         if name:
             name = name[0]
         self._value_list = SCPIValueList()

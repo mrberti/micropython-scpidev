@@ -103,9 +103,13 @@ class SCPIValueList(list):
     #     list.__init__(self)
     def init(self, values_string):
         # Get inner part of {} which contains the parameter's values.
-        inner = re.findall(r"{(.+)}", values_string)
+        match = re.match(r"{(.+)}", values_string)
+        if match:
+            inner=match.group(1)
+        else:
+            inner=None
         if inner:
-            for val in inner[0].split("|"):
+            for val in inner.split("|"):
                 self.append(SCPIValue(val))
         else:
             self.append(SCPIValue(values_string))
