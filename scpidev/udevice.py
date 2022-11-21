@@ -30,7 +30,20 @@ class SCPIDevice():
                     cmd_string,
                     kwargs["cmd_dict"][cmd_string],
                 )
-
+        self.reset_error_message()
+        self.status_byte = 0x00
+        
+    def reset_error_message(self, *args, **kwargs):
+        # args and kwargs for compatiblity with self.execute
+        self.last_error_message = "0 No error"
+        
+    def get_error_message(self, *args, **kwargs):
+        # args and kwargs for compatiblity with self.execute
+        return self.last_error_message
+    
+    def get_status_byte(self, *args, **kwargs):
+        return self.status_byte
+    
     def add_command(self, scpi_string, action, name="", description=""):
         new_cmd = SCPICommand(
             scpi_string=scpi_string,
@@ -68,8 +81,10 @@ class SCPIDevice():
                         .format(command_string, exc))
                     raise exc
             else:
+                self.last_error_message = '1 parameter missmatch'
                 print("Parameter mismatch.")
         else:
+            self.last_error_message = f'1 command "{command_string}" not found'
             print("No match found.")
         return result_string
 
@@ -82,7 +97,12 @@ class SCPIDevice():
                 del cmd_str_list_recv[-1]
             if cmd_str_list_recv:
                 for cmd_str in cmd_str_list_recv:
-                    result = self.execute(cmd_str)
+                    try:
+                        result = self.execute(cmd_str)
+                    except Exception as err:
+                        result = None
+                        self.last_error_message = f'1 {err}'
+                        
                     if result:
                         result_list.append(result)
                         try:
@@ -94,3 +114,4 @@ class SCPIDevice():
     def close(self):
         print("Closing device...")
         self._interface.close()
+
