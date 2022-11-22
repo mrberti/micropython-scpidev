@@ -13,6 +13,8 @@ except ImportError:
     import time
 from .command import SCPICommand, SCPICommandList
 from .uinterface import SCPIInterfaceTCP
+import os
+import binascii
 
 
 BUFFER_SIZE = 128
@@ -32,6 +34,32 @@ class SCPIDevice():
                 )
         self.reset_error_message()
         self.status_byte = 0x00
+        self.sre = 0
+        
+        self._add_standard_commands()
+        
+    def _add_standard_commands(self):
+        self.add_command('*IDN', self.idn)
+        self.add_command('*CLS', self.reset_error_message)
+        self.add_command(':SYSTem:ERRor?', self.get_error_message)
+        self.add_command('*SRE', self.set_service_request_enable)
+        self.add_command('*SRE?', self.get_service_request_enable)
+        self.add_command('*STB?', self.get_status_byte)
+        
+    def set_service_request_enable(self, *args, **kwargs):
+        self.sre = int(args[0])
+    
+    def get_service_request_enable(self, *args, **kwargs):
+        return self.sre
+    
+    def get_status_byte(self, *args, **kwargs):
+        return self.status_byte
+        
+    def idn(self, *args, **kwargs):
+        # args and kwargs for compatiblity with self.execute
+        machine_name = os.uname().sysname
+        mac = binascii.hexlify(nic.config('mac')).decode()
+        return "micropython-scpidev,{},{},0.0.1a".format(machine_name, mac)
         
     def reset_error_message(self, *args, **kwargs):
         # args and kwargs for compatiblity with self.execute
@@ -114,4 +142,3 @@ class SCPIDevice():
     def close(self):
         print("Closing device...")
         self._interface.close()
-
