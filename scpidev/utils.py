@@ -94,6 +94,22 @@ def create_block_data_string(string):
     """
     return "#{}{}{}".format(len(str(len(string))), len(string), string)
 
+
+def str2int(string):
+    """
+    IEEE 488.2 defines #Q, #H and #B as prefix for octal, hexadecimal and binary numbers.
+    This functions does as well.
+    """
+    if isinstance(string, str):
+        string=string.replace('#b','0b')
+        string=string.replace('#B','0b')
+        string=string.replace('#h','0x')
+        string=string.replace('#H','0x')
+        string=string.replace('#q','0o')
+        string=string.replace('#Q','0o')
+    return int(string)
+
+
 def main_test():
     print(repr(findfirst(r"asd", "aaasasd as asd")))
     print(repr(remove_non_ascii("auo")))
